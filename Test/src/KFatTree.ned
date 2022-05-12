@@ -17,21 +17,12 @@
 
 package test;
 
-import ned.DatarateChannel;
+
 import inet.node.inet.Router;
 import inet.node.inet.StandardHost;
 import inet.networklayer.configurator.ipv4.Ipv4NetworkConfigurator;
 
 
-channel HostToSwitch extends DatarateChannel
-{
-    datarate = 10Gbps;
-}
-
-channel SwitchToSwitch extends DatarateChannel
-{
-    datarate = 100Gbps;
-}
 
 module Pod
 {

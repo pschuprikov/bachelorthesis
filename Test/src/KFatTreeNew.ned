@@ -22,7 +22,16 @@ import inet.node.inet.Router;
 import inet.node.inet.StandardHost;
 import inet.networklayer.configurator.ipv4.Ipv4NetworkConfigurator;
 
+import ned.DatarateChannel;
+channel HostToSwitch extends DatarateChannel
+{
+    datarate = 10Gbps;
+}
 
+channel SwitchToSwitch extends DatarateChannel
+{
+    datarate = 100Gbps;
+}
 
 module Pod2
 {
@@ -32,8 +41,12 @@ module Pod2
         inout port[int((k/2)^2)];
         inout hosts[int((k/2)^2)];
     submodules:
-        aggregateSwitch[int(k/2)]: Router;
-        edgeSwitch[int(k/2)]: Router;
+        aggregateSwitch[int(k/2)]: Router {
+            multicastForwarding = true;
+        }
+        edgeSwitch[int(k/2)]: Router {
+            multicastForwarding = true;
+        }
     connections:
         for i=0..sizeof(aggregateSwitch)-1, for j=0..int(k/2) - 1 {
             aggregateSwitch[i].ethg++ <--> port[i*int(k/2)+j];
@@ -58,9 +71,15 @@ module Hosts
         inout hosts[int((k^3)/4)];
        
     submodules:
-        client: StandardHost;
-        coordinator: StandardHost;
-        replica[int(((k^3)/4)-2)]: StandardHost;
+        client: StandardHost {
+            multicastForwarding = true;
+        }
+        coordinator: StandardHost {
+            multicastForwarding = true;
+        }
+        replica[int(((k^3)/4)-2)]: StandardHost {
+            multicastForwarding = true;
+        }
     connections:
         client.ethg++ <--> hosts[0];
         coordinator.ethg++  <--> hosts[1];
