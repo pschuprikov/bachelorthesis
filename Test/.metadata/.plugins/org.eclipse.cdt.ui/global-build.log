@@ -1,0 +1,24 @@
+10:01:37 **** Build of configuration debug for project inet4 ****
+make MODE=debug -j11 all 
+*** COMPILING with:
+clang++ -c -std=c++14 -O0 -Wall -glldb -fstandalone-debug   -MMD -MP -MF .d    -isystem /Users/luca/omnetpp-5.7/tools/macosx/include -Wno-deprecated-register -Wno-unused-function -fno-omit-frame-pointer  -DXMLPARSER=libxml -DPREFER_QTENV -DWITH_QTENV -DWITH_PARSIM -DWITH_NETBUILDER -DWITH_OSG -DWITH_OSGEARTH -Wno-overloaded-virtual -include inet/common/precompiled_debug.h -DOMNETPPLIBS_IMPORT -DINET_EXPORT -I. -I/Users/luca/omnetpp-5.7/include
+*** LINKING with:
+clang++ -shared  -o ../out/clang-debug/src/libINET_dbg.dylib  -Wl,-all_load   -loppenvir_dbg -loppsim_dbg -lstdc++  -losg -losgText -losgDB -losgGA -losgViewer -losgUtil -lOpenThreads  -losgEarth -losgEarthUtil    -Wl,-rpath,/Users/luca/omnetpp-5.7/lib -Wl,-rpath,/Users/luca/omnetpp-5.7/tools/macosx/lib -Wl,-rpath,.  -L/usr/lib -L/Users/luca/omnetpp-5.7/tools/macosx/lib -F/Users/luca/omnetpp-5.7/tools/macosx/lib -L/Users/luca/omnetpp-5.7/lib
+Building...
+Creating precompiled header for clang...
+make[1]: *** No rule to make target `../out/clang-debug/src/.last-copts', needed by `inet/opp_defines.h'.  Stop.
+make[1]: *** Waiting for unfinished jobs....
+make: *** [all] Error 2
+"make MODE=debug -j11 all" terminated with exit code 2. Build might be incomplete.
+10:04:54 **** Build of configuration debug for project inet4 ****
+make MODE=debug -j11 all 
+*** COMPILING with:
+clang++ -c -std=c++14 -O0 -Wall -glldb -fstandalone-debug   -MMD -MP -MF .d    -isystem /Users/luca/omnetpp-5.7/tools/macosx/include -Wno-deprecated-register -Wno-unused-function -fno-omit-frame-pointer  -DXMLPARSER=libxml -DPREFER_QTENV -DWITH_QTENV -DWITH_PARSIM -DWITH_NETBUILDER -DWITH_OSG -DWITH_OSGEARTH -Wno-overloaded-virtual -include inet/common/precompiled_debug.h -DOMNETPPLIBS_IMPORT -DINET_EXPORT -I. -I/Users/luca/omnetpp-5.7/include
+*** LINKING with:
+clang++ -shared  -o ../out/clang-debug/src/libINET_dbg.dylib  -Wl,-all_load   -loppenvir_dbg -loppsim_dbg -lstdc++  -losg -losgText -losgDB -losgGA -losgViewer -losgUtil -lOpenThreads  -losgEarth -losgEarthUtil    -Wl,-rpath,/Users/luca/omnetpp-5.7/lib -Wl,-rpath,/Users/luca/omnetpp-5.7/tools/macosx/lib -Wl,-rpath,.  -L/usr/lib -L/Users/luca/omnetpp-5.7/tools/macosx/lib -F/Users/luca/omnetpp-5.7/tools/macosx/lib -L/Users/luca/omnetpp-5.7/lib
+Building...
+Creating precompiled header for clang...
+make[1]: *** No rule to make target `../out/clang-debug/src/.last-copts', needed by `inet/opp_defines.h'.  Stop.
+make[1]: *** Waiting for unfinished jobs....
+make: *** [all] Error 2
+"make MODE=debug -j11 all" terminated with exit code 2. Build might be incomplete.
