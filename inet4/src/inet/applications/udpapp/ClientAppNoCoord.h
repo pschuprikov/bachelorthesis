@@ -34,7 +34,7 @@ namespace inet {
 /**
  * UDP application. See NED for more info.
  */
-class INET_API ClientApp : public ApplicationBase, public UdpSocket::ICallback
+class INET_API ClientAppNoCoord : public ApplicationBase, public UdpSocket::ICallback
 {
   public:
     enum ChooseDestAddrMode {
@@ -54,6 +54,11 @@ class INET_API ClientApp : public ApplicationBase, public UdpSocket::ICallback
     simtime_t delayLimit;
     simtime_t startTime;
     simtime_t stopTime;
+
+
+    simtime_t lastSent;
+    simtime_t maxReturnTime;
+
     int localPort = -1, destPort = -1;
 
     // volatile parameters:
@@ -82,13 +87,16 @@ class INET_API ClientApp : public ApplicationBase, public UdpSocket::ICallback
     int numDuplicated = 0;
     int successfulCommit = 0;
 
+    std::map<int, std::set<int>> transactions;
+    std::map<int, bool> decided;
+
     static int transactionID;
 
     static simsignal_t outOfOrderPkSignal;
 
   protected:
     // chooses random destination address
-    virtual Packet *createRequestPacket(int transId);
+    virtual Packet *createPreparePacket(int transId);
 
     virtual void processPacket(Packet *msg);
 
@@ -99,6 +107,7 @@ class INET_API ClientApp : public ApplicationBase, public UdpSocket::ICallback
     virtual void refreshDisplay() const override;
 
     virtual void sendQuery(int transId);
+    virtual void broadcastAll(int transactionId);
 
     virtual void processStart();
     virtual void processSend();
@@ -113,8 +122,8 @@ class INET_API ClientApp : public ApplicationBase, public UdpSocket::ICallback
     virtual void socketClosed(UdpSocket *socket) override;
 
   public:
-    ClientApp() {}
-    ~ClientApp();
+    ClientAppNoCoord() {}
+    ~ClientAppNoCoord();
 };
 
 } // namespace inet

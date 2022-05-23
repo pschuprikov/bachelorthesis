@@ -29,29 +29,34 @@ namespace inet {
 /**
  * Consumes and prints packets received from the Udp module. See NED for more info.
  */
-class INET_API CoordApp : public ApplicationBase, public UdpSocket::ICallback
+class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::ICallback
 {
   protected:
     enum SelfMsgKinds { START = 1, STOP };
-    enum msgType {REQUEST , PREPARE, VOTE, COMMIT, RESPONSE};
+    enum msgType {REQUEST , PREPARE, VOTE, COMMIT};
 
     UdpSocket socket;
     int localPort, destPort = -1;
     std::vector<L3Address> destAddresses;
-    int numReplicas = 0;
+    L3Address destAddr;
     simtime_t startTime;
     simtime_t stopTime;
     cMessage *selfMsg = nullptr;
     int numReceived, numSent = 0;
-    std::map<int, int> currentTransactions; //  (id , responses)
-    L3Address clientAddress;
+    int currentlyProcessing = 0;
 
+    std::map<int, std::set<int>> transactions;
+    std::map<int, bool> decided;
+
+
+    static int replicaIds;
+    int thisId;
 
     cPar *messageLengthPar = nullptr;
 
   public:
-    CoordApp() {}
-    virtual ~CoordApp();
+    ReplicaAppBroadcast() {}
+    virtual ~ReplicaAppBroadcast();
 
   protected:
     virtual void processPacket(Packet *msg);
@@ -64,8 +69,8 @@ class INET_API CoordApp : public ApplicationBase, public UdpSocket::ICallback
     virtual void finish() override;
     virtual void refreshDisplay() const override;
 
-    virtual Packet* createPacket(int transactionID, msgType type, bool value);
-    virtual void broadcastToReplicas(int transactionId, msgType type, bool value = true);
+    virtual Packet* createVotePacket(int transactionID, bool vote);
+    virtual void broadcastAll(int transactionId);
 
     virtual void socketDataArrived(UdpSocket *socket, Packet *packet) override;
     virtual void socketErrorArrived(UdpSocket *socket, Indication *indication) override;

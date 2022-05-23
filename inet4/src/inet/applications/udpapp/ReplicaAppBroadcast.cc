@@ -14,32 +14,38 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
+#include "ReplicaAppBroadcast.h"
+
+#include <math.h>
 #include "inet/applications/base/ApplicationPacket_m.h"
-#include "inet/applications/udpapp/CoordApp.h"
 #include "inet/common/ModuleAccess.h"
 #include "inet/common/TimeTag_m.h"
 #include "inet/common/packet/Packet.h"
 #include "inet/networklayer/common/FragmentationTag_m.h"
-#include "inet/networklayer/common/L3AddressTag_m.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
 #include "inet/transportlayer/contract/udp/UdpControlInfo_m.h"
 
 namespace inet {
 
-Define_Module(CoordApp);
+Define_Module(ReplicaAppBroadcast);
 
-CoordApp::~CoordApp()
+int ReplicaAppBroadcast::replicaIds = 0;
+
+ReplicaAppBroadcast::~ReplicaAppBroadcast()
 {
     cancelAndDelete(selfMsg);
 }
 
-void CoordApp::initialize(int stage)
+void ReplicaAppBroadcast::initialize(int stage)
 {
     ApplicationBase::initialize(stage);
 
     if (stage == INITSTAGE_LOCAL) {
         numReceived = 0;
         numReceived = 0;
+        currentlyProcessing = 0;
+
+
         WATCH(numReceived);
 
         localPort = par("localPort");
@@ -49,14 +55,15 @@ void CoordApp::initialize(int stage)
         stopTime = par("stopTime");
         messageLengthPar = &par("messageLength");
 
+        thisId = replicaIds++;
 
         if (stopTime >= SIMTIME_ZERO && stopTime < startTime)
             throw cRuntimeError("Invalid startTime/stopTime parameters");
-        selfMsg = new cMessage("UDPSinkTimer");
+        selfMsg = new cMessage("ReplicaAppBroadcastTimer");
     }
 }
 
-void CoordApp::handleMessageWhenUp(cMessage *msg)
+void ReplicaAppBroadcast::handleMessageWhenUp(cMessage *msg)
 {
     if (msg->isSelfMessage()) {
         ASSERT(msg == selfMsg);
@@ -79,25 +86,25 @@ void CoordApp::handleMessageWhenUp(cMessage *msg)
         throw cRuntimeError("Unknown incoming gate: '%s'", msg->getArrivalGate()->getFullName());
 }
 
-void CoordApp::socketDataArrived(UdpSocket *socket, Packet *packet)
+void ReplicaAppBroadcast::socketDataArrived(UdpSocket *socket, Packet *packet)
 {
     // process incoming packet
     processPacket(packet);
 }
 
-void CoordApp::socketErrorArrived(UdpSocket *socket, Indication *indication)
+void ReplicaAppBroadcast::socketErrorArrived(UdpSocket *socket, Indication *indication)
 {
     EV_WARN << "Ignoring UDP error report " << indication->getName() << endl;
     delete indication;
 }
 
-void CoordApp::socketClosed(UdpSocket *socket)
+void ReplicaAppBroadcast::socketClosed(UdpSocket *socket)
 {
     if (operationalState == State::STOPPING_OPERATION)
         startActiveOperationExtraTimeOrFinish(par("stopOperationExtraTime"));
 }
 
-void CoordApp::refreshDisplay() const
+void ReplicaAppBroadcast::refreshDisplay() const
 {
     ApplicationBase::refreshDisplay();
 
@@ -106,13 +113,13 @@ void CoordApp::refreshDisplay() const
     getDisplayString().setTagArg("t", 0, buf);
 }
 
-void CoordApp::finish()
+void ReplicaAppBroadcast::finish()
 {
     ApplicationBase::finish();
     EV_INFO << getFullPath() << ": received " << numReceived << " packets\n";
 }
 
-void CoordApp::setSocketOptions()
+void ReplicaAppBroadcast::setSocketOptions()
 {
     bool receiveBroadcast = par("receiveBroadcast");
     if (receiveBroadcast)
@@ -121,7 +128,7 @@ void CoordApp::setSocketOptions()
     socket.setCallback(this);
 }
 
-void CoordApp::processStart()
+void ReplicaAppBroadcast::processStart()
 {
     socket.setOutputGate(gate("socketOut"));
     socket.bind(localPort);
@@ -140,7 +147,8 @@ void CoordApp::processStart()
         }
     }
 
-    numReplicas = destAddresses.size();
+    destAddr = destAddresses[0];
+
 
     if (stopTime >= SIMTIME_ZERO) {
         selfMsg->setKind(STOP);
@@ -148,18 +156,18 @@ void CoordApp::processStart()
     }
 }
 
-void CoordApp::processStop()
+void ReplicaAppBroadcast::processStop()
 {
    socket.close();
 }
 
-Packet *CoordApp::createPacket(int transactionId, msgType type, bool value)
+
+
+Packet *ReplicaAppBroadcast::createVotePacket(int transactionId, bool vote)
 {
     char msgName[32];
 
-    if (type == PREPARE) sprintf(msgName, "prepare-T%d", transactionId);
-    else if (type == COMMIT) sprintf(msgName, "commit-T%d [%d]", transactionId, value);
-    else if (type == RESPONSE) sprintf(msgName, "response-T%d [%d]", transactionId, value);
+    sprintf(msgName, "Vote-T%d [%d]", transactionId, vote);
 
     Packet *pk = new Packet(msgName);
 
@@ -173,58 +181,58 @@ Packet *CoordApp::createPacket(int transactionId, msgType type, bool value)
 
     pk->insertAtBack(payload);
     pk->addPar("TransactionId") = transactionId;
-    pk->addPar("Type")  = type;
-    pk->addPar("Value") = value;
+    pk->addPar("replicaId") = thisId;
+    pk->addPar("Type")  = VOTE;
+    pk->addPar("Value") = vote;
     pk->addPar("msgId") = numSent;
 
     return pk;
 }
 
+void ReplicaAppBroadcast::broadcastAll(int transactionId) {
 
+    int simultaneousTransactions = currentlyProcessing > 0 ? currentlyProcessing : 1;
 
-void CoordApp::broadcastToReplicas(int transactionId, msgType type, bool value) {
+    bool vote = cComponent::uniform(0, 1) >= pow(0.09 * simultaneousTransactions,2)+0.05; //randomly decide whether transaction can be prepared
+
     for(auto addr : destAddresses) {
-        Packet * toSend = createPacket(transactionId, type, value);
+        Packet * toSend = createVotePacket(transactionId, vote);
         socket.sendTo(toSend, addr, destPort);
     }
 }
 
 
-void CoordApp::processPacket(Packet *pk)
+void ReplicaAppBroadcast::processPacket(Packet *pk)
 {
     EV_INFO << "Received packet: " << UdpSocket::getReceivedPacketInfo(pk) << endl;
     emit(packetReceivedSignal, pk);
 
-    int transactionId = (int) pk->par("TransactionId").longValue();
+
 
     numReceived++;
-    switch (pk->par("Type").longValue()) {
 
-        case REQUEST: {
-            clientAddress = pk->getTag<L3AddressInd>()->getSrcAddress();
-            currentTransactions[transactionId] = 0; //add key to map with 0 votes
-            broadcastToReplicas(transactionId, PREPARE);
+    switch (pk->par("Type").longValue()) {
+        case PREPARE: {
+            currentlyProcessing++;
+
+            broadcastAll(pk->par("TransactionId").longValue());
             break;
         }
 
         case VOTE: {
-            if (currentTransactions.count(transactionId)) {
-                if (pk->par("Value").boolValue()) {
-                    currentTransactions[transactionId]++; //increase votes for the transaction
+            if (pk->par("Type").longValue() == VOTE){
+                int transactionId = pk->par("TransactionId").longValue();
+                int replicaId = pk->par("replicaId").longValue();
+                transactions[transactionId].insert(replicaId);
 
-                    EV_INFO << "Received "<< currentTransactions[transactionId] << " votes for: " << transactionId << endl;
-
-                    if (currentTransactions[transactionId] == numReplicas) {
-                        //successfulTransactions.insert(transactionId);
-                        socket.sendTo(createPacket(transactionId, RESPONSE, true), clientAddress, destPort);
-                        currentTransactions.erase(transactionId);
-                        broadcastToReplicas(transactionId, COMMIT, true);
+                if (decided[transactionId]!=true) {
+                    if (pk->par("Value").boolValue() && //vote yes
+                            transactions[transactionId].size() < destAddresses.size()) { //not all votes
+                        decided[transactionId] = false;
+                    } else {
+                        decided[transactionId] = true;
+                        currentlyProcessing--;
                     }
-                } else {
-                    EV_INFO << "Received NO vote " << endl;
-                    socket.sendTo(createPacket(transactionId, RESPONSE, false), clientAddress, destPort);
-                    currentTransactions.erase(transactionId);
-                    broadcastToReplicas(transactionId, COMMIT, false);
                 }
 
             }
@@ -232,13 +240,14 @@ void CoordApp::processPacket(Packet *pk)
         }
 
         default: {
-            throw cRuntimeError("Invalid kind %d in self message", (int)pk->par("Type").longValue());
+            throw cRuntimeError("Invalid kind %d in message", (int)pk->par("Type").longValue());
         }
     }
+
     delete pk;
 }
 
-void CoordApp::handleStartOperation(LifecycleOperation *operation)
+void ReplicaAppBroadcast::handleStartOperation(LifecycleOperation *operation)
 {
     simtime_t start = std::max(startTime, simTime());
     if ((stopTime < SIMTIME_ZERO) || (start < stopTime) || (start == stopTime && startTime == stopTime)) {
@@ -247,14 +256,14 @@ void CoordApp::handleStartOperation(LifecycleOperation *operation)
     }
 }
 
-void CoordApp::handleStopOperation(LifecycleOperation *operation)
+void ReplicaAppBroadcast::handleStopOperation(LifecycleOperation *operation)
 {
     cancelEvent(selfMsg);
     socket.close();
     delayActiveOperationFinish(par("stopOperationTimeout"));
 }
 
-void CoordApp::handleCrashOperation(LifecycleOperation *operation)
+void ReplicaAppBroadcast::handleCrashOperation(LifecycleOperation *operation)
 {
     cancelEvent(selfMsg);
     if (operation->getRootModule() != getContainingNode(this)) {     // closes socket when the application crashed only

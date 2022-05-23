@@ -67,13 +67,19 @@ module Hosts
 {
     parameters: 
         int k;
+        int clients;
     gates:
         inout hosts[int((k^3)/4)];
        
     submodules:
-        client: StandardHost {
+        client[clients]: StandardHost {
             multicastForwarding = true;
         }
+        
+        clientSwitch: Router {
+            multicastForwarding = true;
+        }
+        
         coordinator: StandardHost {
             multicastForwarding = true;
         }
@@ -81,11 +87,16 @@ module Hosts
             multicastForwarding = true;
         }
     connections:
-        client.ethg++ <--> hosts[0];
-        coordinator.ethg++  <--> hosts[1];
+        clientSwitch.ethg++ <--> SwitchToSwitch <--> hosts[0];
+        
+        for i=0..sizeof(client)-1 {
+            clientSwitch.ethg++ <--> HostToSwitch <--> client[i].ethg++;
+        }
+        
+        coordinator.ethg++ <--> HostToSwitch  <--> hosts[1];
         
         for i=0..sizeof(replica)-1 {
-            replica[i].ethg++ <--> hosts[i+2];
+            replica[i].ethg++ <--> HostToSwitch <--> hosts[i+2];
         }
             
     
@@ -96,6 +107,7 @@ network KFatTreeNew
 {
     parameters:
         int k;
+        int clients;
 
     submodules:
         coreSwitch[int((k/2)^2)]: Router;
@@ -104,6 +116,7 @@ network KFatTreeNew
         }
 		hosts: Hosts {
 		    k = k;
+		    clients = clients;
 		}
         configurator: Ipv4NetworkConfigurator;
 
@@ -114,7 +127,7 @@ network KFatTreeNew
         }
         
         for i=0..sizeof(pod)-1, for j=0..int((k/2)^2)-1 {
-            hosts.hosts++<--> HostToSwitch <--> pod[i].hosts++;
+            hosts.hosts++ <--> pod[i].hosts++;
         }
 
 }

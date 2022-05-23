@@ -14,6 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
+#include <math.h>
 #include "inet/applications/base/ApplicationPacket_m.h"
 #include "inet/applications/udpapp/ReplicaApp.h"
 #include "inet/common/ModuleAccess.h"
@@ -40,6 +41,7 @@ void ReplicaApp::initialize(int stage)
         numReceived = 0;
         numReceived = 0;
         currentlyProcessing = 0;
+
 
         WATCH(numReceived);
 
@@ -160,7 +162,9 @@ Packet *ReplicaApp::createCommitResponsePacket(int transactionId)
 {
     char msgName[32];
 
-    bool vote = cComponent::normal(0, 1) <= 1.8; //randomly decide whether transaction can be prepared
+    int simultaneousTransactions = currentlyProcessing > 0 ? currentlyProcessing : 1;
+
+    bool vote = cComponent::uniform(0, 1) >= pow(0.09 * simultaneousTransactions,2)+0.05; //randomly decide whether transaction can be prepared
 
     sprintf(msgName, "Vote-T%d [%d]", transactionId, vote);
 
@@ -207,7 +211,7 @@ void ReplicaApp::processPacket(Packet *pk)
         }
 
         default: {
-            throw cRuntimeError("Invalid kind %d in self message", (int)pk->par("Type").longValue());
+            throw cRuntimeError("Invalid kind %d in message", (int)pk->par("Type").longValue());
         }
     }
 
