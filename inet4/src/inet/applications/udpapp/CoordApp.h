@@ -33,7 +33,7 @@ class INET_API CoordApp : public ApplicationBase, public UdpSocket::ICallback
 {
   protected:
     enum SelfMsgKinds { START = 1, STOP };
-    enum msgType {REQUEST , PREPARE, VOTE, COMMIT, RESPONSE};
+    enum msgType {REQUEST, PREPARE, VOTE, COMMIT, ACKNOWLEDGE, RESPONSE};
 
     UdpSocket socket;
     int localPort, destPort = -1;

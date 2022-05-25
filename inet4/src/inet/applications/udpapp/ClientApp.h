@@ -45,7 +45,7 @@ class INET_API ClientApp : public ApplicationBase, public UdpSocket::ICallback
 
   protected:
     enum SelfMsgKinds { START = 1, SEND, STOP };
-    enum msgType {REQUEST, PREPARE, VOTE, COMMIT, RESPONSE};
+    enum msgType {REQUEST, PREPARE, VOTE, COMMIT, ACKNOWLEDGE, RESPONSE};
 
     typedef std::map<int, int> SourceSequence;
 

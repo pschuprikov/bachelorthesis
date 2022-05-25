@@ -158,31 +158,37 @@ void ReplicaApp::processStop()
 
 
 
-Packet *ReplicaApp::createCommitResponsePacket(int transactionId)
+Packet *ReplicaApp::createCommitResponsePacket(int transactionId,  msgType type)
 {
-    char msgName[32];
-
-    int simultaneousTransactions = currentlyProcessing > 0 ? currentlyProcessing : 1;
-
-    bool vote = cComponent::uniform(0, 1) >= pow(0.09 * simultaneousTransactions,2)+0.05; //randomly decide whether transaction can be prepared
-
-    sprintf(msgName, "Vote-T%d [%d]", transactionId, vote);
-
     Packet *pk = new Packet(msgName);
 
     const auto& payload = makeShared<ApplicationPacket>();
     long msgByteLength = *messageLengthPar;
     payload->setChunkLength(B(msgByteLength));
     payload->setSequenceNumber(numSent);
-    payload->addTag<CreationTimeTag>()->setCreationTime(simTime()); //difference between tag and addPar? not sure where to add transaction details
-
-
+    payload->addTag<CreationTimeTag>()->setCreationTime(simTime());
 
     pk->insertAtBack(payload);
     pk->addPar("TransactionId") = transactionId;
-    pk->addPar("Type")  = VOTE;
-    pk->addPar("Value") = vote;
+    pk->addPar("Type")  = type;
     pk->addPar("msgId") = numSent;
+
+
+    char msgName[32];
+
+    if (type == VOTE) {
+        int simultaneousTransactions = currentlyProcessing > 0 ? currentlyProcessing : 1;
+        bool vote = cComponent::uniform(0, 1) >= pow(0.09 * simultaneousTransactions,2)+0.05; //randomly decide whether transaction can be prepared
+
+        sprintf(msgName, "Vote-T%d [%d]", transactionId, vote);
+
+        pk->addPar("Value") = vote;
+
+    } else if (type == ACKNOWLEDGE) {
+        sprintf(msgName, "ACK-T%d", transactionId, vote);
+    }
+
+
 
     return pk;
 }
@@ -207,6 +213,7 @@ void ReplicaApp::processPacket(Packet *pk)
 
         case COMMIT: {
             currentlyProcessing--;
+            //SHOULD ADD THE ACKNOWLEDGEMENT
             break;
         }
 

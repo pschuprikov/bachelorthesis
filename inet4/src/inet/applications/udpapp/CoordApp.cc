@@ -216,8 +216,7 @@ void CoordApp::processPacket(Packet *pk)
 
                     if (currentTransactions[transactionId] == numReplicas) {
                         //successfulTransactions.insert(transactionId);
-                        socket.sendTo(createPacket(transactionId, RESPONSE, true), clientAddress, destPort);
-                        currentTransactions.erase(transactionId);
+                        currentTransactions[transactionId] = 0; //reset counter to count ack
                         broadcastToReplicas(transactionId, COMMIT, true);
                     }
                 } else {
@@ -228,6 +227,13 @@ void CoordApp::processPacket(Packet *pk)
                 }
 
             }
+            break;
+        }
+
+        case ACKNOWLEDGE: {
+            socket.sendTo(createPacket(transactionId, RESPONSE, true), clientAddress, destPort);
+            currentTransactions.erase(transactionId);
+
             break;
         }
 
