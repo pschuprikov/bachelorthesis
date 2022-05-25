@@ -20,6 +20,7 @@
 #include "inet/common/TimeTag_m.h"
 #include "inet/common/packet/Packet.h"
 #include "inet/networklayer/common/FragmentationTag_m.h"
+#include "inet/networklayer/common/L3AddressTag_m.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
 #include "inet/transportlayer/contract/udp/UdpControlInfo_m.h"
 
@@ -158,6 +159,7 @@ Packet *CoordApp::createPacket(int transactionId, msgType type, bool value)
 
     if (type == PREPARE) sprintf(msgName, "prepare-T%d", transactionId);
     else if (type == COMMIT) sprintf(msgName, "commit-T%d [%d]", transactionId, value);
+    else if (type == RESPONSE) sprintf(msgName, "response-T%d [%d]", transactionId, value);
 
     Packet *pk = new Packet(msgName);
 
@@ -178,6 +180,8 @@ Packet *CoordApp::createPacket(int transactionId, msgType type, bool value)
     return pk;
 }
 
+
+
 void CoordApp::broadcastToReplicas(int transactionId, msgType type, bool value) {
     for(auto addr : destAddresses) {
         Packet * toSend = createPacket(transactionId, type, value);
@@ -197,6 +201,7 @@ void CoordApp::processPacket(Packet *pk)
     switch (pk->par("Type").longValue()) {
 
         case REQUEST: {
+            clientAddress = pk->getTag<L3AddressInd>()->getSrcAddress();
             currentTransactions[transactionId] = 0; //add key to map with 0 votes
             broadcastToReplicas(transactionId, PREPARE);
             break;
@@ -210,17 +215,25 @@ void CoordApp::processPacket(Packet *pk)
                     EV_INFO << "Received "<< currentTransactions[transactionId] << " votes for: " << transactionId << endl;
 
                     if (currentTransactions[transactionId] == numReplicas) {
-                        successfulTransactions.insert(transactionId);
-                        currentTransactions.erase(transactionId);
+                        //successfulTransactions.insert(transactionId);
+                        currentTransactions[transactionId] = 0; //reset counter to count ack
                         broadcastToReplicas(transactionId, COMMIT, true);
                     }
                 } else {
                     EV_INFO << "Received NO vote " << endl;
+                    socket.sendTo(createPacket(transactionId, RESPONSE, false), clientAddress, destPort);
                     currentTransactions.erase(transactionId);
                     broadcastToReplicas(transactionId, COMMIT, false);
                 }
 
             }
+            break;
+        }
+
+        case ACKNOWLEDGE: {
+            socket.sendTo(createPacket(transactionId, RESPONSE, true), clientAddress, destPort);
+            currentTransactions.erase(transactionId);
+
             break;
         }
 

@@ -14,9 +14,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program; if not, see <http://www.gnu.org/licenses/>.
 //
+#include "ReplicaAppBroadcast.h"
+
 #include <math.h>
 #include "inet/applications/base/ApplicationPacket_m.h"
-#include "inet/applications/udpapp/ReplicaApp.h"
 #include "inet/common/ModuleAccess.h"
 #include "inet/common/TimeTag_m.h"
 #include "inet/common/packet/Packet.h"
@@ -26,14 +27,16 @@
 
 namespace inet {
 
-Define_Module(ReplicaApp);
+Define_Module(ReplicaAppBroadcast);
 
-ReplicaApp::~ReplicaApp()
+int ReplicaAppBroadcast::replicaIds = 0;
+
+ReplicaAppBroadcast::~ReplicaAppBroadcast()
 {
     cancelAndDelete(selfMsg);
 }
 
-void ReplicaApp::initialize(int stage)
+void ReplicaAppBroadcast::initialize(int stage)
 {
     ApplicationBase::initialize(stage);
 
@@ -52,13 +55,15 @@ void ReplicaApp::initialize(int stage)
         stopTime = par("stopTime");
         messageLengthPar = &par("messageLength");
 
+        thisId = replicaIds++;
+
         if (stopTime >= SIMTIME_ZERO && stopTime < startTime)
             throw cRuntimeError("Invalid startTime/stopTime parameters");
-        selfMsg = new cMessage("ReplicaAppTimer");
+        selfMsg = new cMessage("ReplicaAppBroadcastTimer");
     }
 }
 
-void ReplicaApp::handleMessageWhenUp(cMessage *msg)
+void ReplicaAppBroadcast::handleMessageWhenUp(cMessage *msg)
 {
     if (msg->isSelfMessage()) {
         ASSERT(msg == selfMsg);
@@ -81,25 +86,25 @@ void ReplicaApp::handleMessageWhenUp(cMessage *msg)
         throw cRuntimeError("Unknown incoming gate: '%s'", msg->getArrivalGate()->getFullName());
 }
 
-void ReplicaApp::socketDataArrived(UdpSocket *socket, Packet *packet)
+void ReplicaAppBroadcast::socketDataArrived(UdpSocket *socket, Packet *packet)
 {
     // process incoming packet
     processPacket(packet);
 }
 
-void ReplicaApp::socketErrorArrived(UdpSocket *socket, Indication *indication)
+void ReplicaAppBroadcast::socketErrorArrived(UdpSocket *socket, Indication *indication)
 {
     EV_WARN << "Ignoring UDP error report " << indication->getName() << endl;
     delete indication;
 }
 
-void ReplicaApp::socketClosed(UdpSocket *socket)
+void ReplicaAppBroadcast::socketClosed(UdpSocket *socket)
 {
     if (operationalState == State::STOPPING_OPERATION)
         startActiveOperationExtraTimeOrFinish(par("stopOperationExtraTime"));
 }
 
-void ReplicaApp::refreshDisplay() const
+void ReplicaAppBroadcast::refreshDisplay() const
 {
     ApplicationBase::refreshDisplay();
 
@@ -108,13 +113,13 @@ void ReplicaApp::refreshDisplay() const
     getDisplayString().setTagArg("t", 0, buf);
 }
 
-void ReplicaApp::finish()
+void ReplicaAppBroadcast::finish()
 {
     ApplicationBase::finish();
     EV_INFO << getFullPath() << ": received " << numReceived << " packets\n";
 }
 
-void ReplicaApp::setSocketOptions()
+void ReplicaAppBroadcast::setSocketOptions()
 {
     bool receiveBroadcast = par("receiveBroadcast");
     if (receiveBroadcast)
@@ -123,7 +128,7 @@ void ReplicaApp::setSocketOptions()
     socket.setCallback(this);
 }
 
-void ReplicaApp::processStart()
+void ReplicaAppBroadcast::processStart()
 {
     socket.setOutputGate(gate("socketOut"));
     socket.bind(localPort);
@@ -151,50 +156,53 @@ void ReplicaApp::processStart()
     }
 }
 
-void ReplicaApp::processStop()
+void ReplicaAppBroadcast::processStop()
 {
    socket.close();
 }
 
 
 
-Packet *ReplicaApp::createCommitResponsePacket(int transactionId,  msgType type)
+Packet *ReplicaAppBroadcast::createVotePacket(int transactionId, bool vote)
 {
+    char msgName[32];
+
+    sprintf(msgName, "Vote-T%d [%d]", transactionId, vote);
+
     Packet *pk = new Packet(msgName);
 
     const auto& payload = makeShared<ApplicationPacket>();
     long msgByteLength = *messageLengthPar;
     payload->setChunkLength(B(msgByteLength));
     payload->setSequenceNumber(numSent);
-    payload->addTag<CreationTimeTag>()->setCreationTime(simTime());
+    payload->addTag<CreationTimeTag>()->setCreationTime(simTime()); //difference between tag and addPar? not sure where to add transaction details
+
+
 
     pk->insertAtBack(payload);
     pk->addPar("TransactionId") = transactionId;
-    pk->addPar("Type")  = type;
+    pk->addPar("replicaId") = thisId;
+    pk->addPar("Type")  = VOTE;
+    pk->addPar("Value") = vote;
     pk->addPar("msgId") = numSent;
-
-
-    char msgName[32];
-
-    if (type == VOTE) {
-        int simultaneousTransactions = currentlyProcessing > 0 ? currentlyProcessing : 1;
-        bool vote = cComponent::uniform(0, 1) >= pow(0.09 * simultaneousTransactions,2)+0.05; //randomly decide whether transaction can be prepared
-
-        sprintf(msgName, "Vote-T%d [%d]", transactionId, vote);
-
-        pk->addPar("Value") = vote;
-
-    } else if (type == ACKNOWLEDGE) {
-        sprintf(msgName, "ACK-T%d", transactionId, vote);
-    }
-
-
 
     return pk;
 }
 
+void ReplicaAppBroadcast::broadcastAll(int transactionId) {
 
-void ReplicaApp::processPacket(Packet *pk)
+    int simultaneousTransactions = currentlyProcessing > 0 ? currentlyProcessing : 1;
+
+    bool vote = cComponent::uniform(0, 1) >= pow(0.09 * simultaneousTransactions,2)+0.05; //randomly decide whether transaction can be prepared
+
+    for(auto addr : destAddresses) {
+        Packet * toSend = createVotePacket(transactionId, vote);
+        socket.sendTo(toSend, addr, destPort);
+    }
+}
+
+
+void ReplicaAppBroadcast::processPacket(Packet *pk)
 {
     EV_INFO << "Received packet: " << UdpSocket::getReceivedPacketInfo(pk) << endl;
     emit(packetReceivedSignal, pk);
@@ -206,14 +214,28 @@ void ReplicaApp::processPacket(Packet *pk)
     switch (pk->par("Type").longValue()) {
         case PREPARE: {
             currentlyProcessing++;
-            Packet * toSend = createCommitResponsePacket(pk->par("TransactionId").longValue());
-            socket.sendTo(toSend, destAddr, destPort);
+
+            broadcastAll(pk->par("TransactionId").longValue());
             break;
         }
 
-        case COMMIT: {
-            currentlyProcessing--;
-            //SHOULD ADD THE ACKNOWLEDGEMENT
+        case VOTE: {
+            if (pk->par("Type").longValue() == VOTE){
+                int transactionId = pk->par("TransactionId").longValue();
+                int replicaId = pk->par("replicaId").longValue();
+                transactions[transactionId].insert(replicaId);
+
+                if (decided[transactionId]!=true) {
+                    if (pk->par("Value").boolValue() && //vote yes
+                            transactions[transactionId].size() < destAddresses.size()) { //not all votes
+                        decided[transactionId] = false;
+                    } else {
+                        decided[transactionId] = true;
+                        currentlyProcessing--;
+                    }
+                }
+
+            }
             break;
         }
 
@@ -225,7 +247,7 @@ void ReplicaApp::processPacket(Packet *pk)
     delete pk;
 }
 
-void ReplicaApp::handleStartOperation(LifecycleOperation *operation)
+void ReplicaAppBroadcast::handleStartOperation(LifecycleOperation *operation)
 {
     simtime_t start = std::max(startTime, simTime());
     if ((stopTime < SIMTIME_ZERO) || (start < stopTime) || (start == stopTime && startTime == stopTime)) {
@@ -234,14 +256,14 @@ void ReplicaApp::handleStartOperation(LifecycleOperation *operation)
     }
 }
 
-void ReplicaApp::handleStopOperation(LifecycleOperation *operation)
+void ReplicaAppBroadcast::handleStopOperation(LifecycleOperation *operation)
 {
     cancelEvent(selfMsg);
     socket.close();
     delayActiveOperationFinish(par("stopOperationTimeout"));
 }
 
-void ReplicaApp::handleCrashOperation(LifecycleOperation *operation)
+void ReplicaAppBroadcast::handleCrashOperation(LifecycleOperation *operation)
 {
     cancelEvent(selfMsg);
     if (operation->getRootModule() != getContainingNode(this)) {     // closes socket when the application crashed only

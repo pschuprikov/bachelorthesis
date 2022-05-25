@@ -33,7 +33,7 @@ class INET_API ReplicaApp : public ApplicationBase, public UdpSocket::ICallback
 {
   protected:
     enum SelfMsgKinds { START = 1, STOP };
-    enum msgType {REQUEST , PREPARE, VOTE, COMMIT};
+    enum msgType {REQUEST, PREPARE, VOTE, COMMIT, ACKNOWLEDGE, RESPONSE};
 
     UdpSocket socket;
     int localPort, destPort = -1;

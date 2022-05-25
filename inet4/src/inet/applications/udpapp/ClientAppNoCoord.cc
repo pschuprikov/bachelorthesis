@@ -20,7 +20,7 @@
 
 
 #include "inet/applications/base/ApplicationPacket_m.h"
-#include "inet/applications/udpapp/ClientApp.h"
+#include "inet/applications/udpapp/ClientAppNoCoord.h"
 #include "inet/common/ModuleAccess.h"
 #include "inet/common/TimeTag_m.h"
 #include "inet/common/packet/Packet.h"
@@ -34,24 +34,24 @@ EXECUTE_ON_STARTUP(
         cEnum * e = cEnum::find("inet::ChooseDestAddrMode");
         if (!e)
             OMNETPP6_CODE(omnetpp::internal::)enums.getInstance()->add(e = new cEnum("inet::ChooseDestAddrMode"));
-        e->insert(ClientApp::ONCE, "once");
-        e->insert(ClientApp::PER_BURST, "perBurst");
-        e->insert(ClientApp::PER_SEND, "perSend");
+        e->insert(ClientAppNoCoord::ONCE, "once");
+        e->insert(ClientAppNoCoord::PER_BURST, "perBurst");
+        e->insert(ClientAppNoCoord::PER_SEND, "perSend");
         );
 
-Define_Module(ClientApp);
+Define_Module(ClientAppNoCoord);
 
-int ClientApp::counter;
-int ClientApp::transactionID;
+int ClientAppNoCoord::counter;
+int ClientAppNoCoord::transactionID;
 
-simsignal_t ClientApp::outOfOrderPkSignal = registerSignal("outOfOrderPk");
+simsignal_t ClientAppNoCoord::outOfOrderPkSignal = registerSignal("outOfOrderPk");
 
-ClientApp::~ClientApp()
+ClientAppNoCoord::~ClientAppNoCoord()
 {
     cancelAndDelete(timerNext);
 }
 
-void ClientApp::initialize(int stage)
+void ClientAppNoCoord::initialize(int stage)
 {
     ApplicationBase::initialize(stage);
 
@@ -87,14 +87,14 @@ void ClientApp::initialize(int stage)
         localPort = par("localPort");
         destPort = par("destPort");
 
-        timerNext = new cMessage("ClientAppTimer");
+        timerNext = new cMessage("ClientAppNoCoordTimer");
     }
 }
 
-Packet *ClientApp::createRequestPacket(int transId)
+Packet *ClientAppNoCoord::createPreparePacket(int transId)
 {
     char msgName[32];
-    sprintf(msgName, "request-T%d", transId);
+    sprintf(msgName, "prepare-T%d", transId);
 
     Packet *pk = new Packet(msgName);
 
@@ -108,13 +108,13 @@ Packet *ClientApp::createRequestPacket(int transId)
 
     pk->insertAtBack(payload);
     pk->addPar("TransactionId") = transId;
-    pk->addPar("Type")  = REQUEST;
+    pk->addPar("Type")  = PREPARE;
     pk->addPar("msgId") = numSent;
 
     return pk;
 }
 
-void ClientApp::processStart()
+void ClientAppNoCoord::processStart()
 {
     socket.setOutputGate(gate("socketOut"));
     socket.setCallback(this);
@@ -166,29 +166,39 @@ void ClientApp::processStart()
     processSend();
 }
 
-void ClientApp::processSend()
+void ClientAppNoCoord::processSend()
 {
     if (stopTime < SIMTIME_ZERO || simTime() < stopTime) {
-        sendQuery(transactionID++);
+        //sendQuery(transactionID++);
+        lastSent = simTime();
+        broadcastAll(transactionID++);
     }
 }
 
-void ClientApp::sendQuery(int transId)
+void ClientAppNoCoord::broadcastAll(int transactionId) {
+
+    for (auto addr : destAddresses) {
+        Packet * toSend = createPreparePacket(transactionId);
+        socket.sendTo(toSend, addr, destPort);
+    }
+}
+
+void ClientAppNoCoord::sendQuery(int transId)
 {
-    Packet * pk = createRequestPacket(transId);
+    Packet * pk = createPreparePacket(transId);
     pk->setTimestamp();
     emit(packetSentSignal, pk);
     socket.sendTo(pk, destAddr, destPort);
 
 }
 
-void ClientApp::processStop()
+void ClientAppNoCoord::processStop()
 {
     socket.close();
     socket.setCallback(nullptr);
 }
 
-void ClientApp::handleMessageWhenUp(cMessage *msg)
+void ClientAppNoCoord::handleMessageWhenUp(cMessage *msg)
 {
     if (msg->isSelfMessage()) {
         switch (msg->getKind()) {
@@ -212,25 +222,25 @@ void ClientApp::handleMessageWhenUp(cMessage *msg)
         socket.processMessage(msg);
 }
 
-void ClientApp::socketDataArrived(UdpSocket *socket, Packet *packet)
+void ClientAppNoCoord::socketDataArrived(UdpSocket *socket, Packet *packet)
 {
     // process incoming packet
     processPacket(packet);
 }
 
-void ClientApp::socketErrorArrived(UdpSocket *socket, Indication *indication)
+void ClientAppNoCoord::socketErrorArrived(UdpSocket *socket, Indication *indication)
 {
     EV_WARN << "Ignoring UDP error report " << indication->getName() << endl;
     delete indication;
 }
 
-void ClientApp::socketClosed(UdpSocket *socket)
+void ClientAppNoCoord::socketClosed(UdpSocket *socket)
 {
     if (operationalState == State::STOPPING_OPERATION)
         startActiveOperationExtraTimeOrFinish(par("stopOperationExtraTime"));
 }
 
-void ClientApp::refreshDisplay() const
+void ClientAppNoCoord::refreshDisplay() const
 {
     ApplicationBase::refreshDisplay();
 
@@ -239,17 +249,30 @@ void ClientApp::refreshDisplay() const
     getDisplayString().setTagArg("t", 0, buf);
 }
 
-void ClientApp::processPacket(Packet *pk)
+void ClientAppNoCoord::processPacket(Packet *pk)
 {
-    if (pk->par("Type").longValue() == RESPONSE){
-        if (pk->par("Value").boolValue()) {
-            emit(registerSignal("successfulCommit"), ++successfulCommit);
-        } else {
-            emit(registerSignal("successfulCommit"), successfulCommit);
-            //sendQuery(pk->par("TransactionId").longValue());
+    if (pk->par("Type").longValue() == VOTE){
+        EV_DEBUG << "Received vote" << endl;
+        int transactionId = pk->par("TransactionId").longValue();
+        int replicaId = pk->par("replicaId").longValue();
+        transactions[transactionId].insert(replicaId);
+
+        if (decided[transactionId]!=true) {
+
+            if (pk->par("Value").boolValue() && //vote yes
+                    transactions[transactionId].size() < destAddresses.size()) { //not all votes
+                decided[transactionId] = false;
+            } else {
+                decided[transactionId] = true;
+                simtime_t returnTime = simTime() - lastSent;
+                EV_DEBUG << "Time till response: " << returnTime << endl;
+                maxReturnTime = maxReturnTime > returnTime ? maxReturnTime : returnTime;
+                EV_DEBUG << "Max time till response: " << maxReturnTime << endl;
+                //schedule next sending
+                scheduleAt(simTime()+ *sendIntervalPar, timerNext);
+            }
         }
-        //schedule next sending
-        scheduleAt(simTime()+ *sendIntervalPar, timerNext);
+
     }
 
 
@@ -299,7 +322,7 @@ void ClientApp::processPacket(Packet *pk)
 
 
 
-void ClientApp::finish()
+void ClientAppNoCoord::finish()
 {
     recordScalar("Total sent", numSent);
     recordScalar("Total received", numReceived);
@@ -307,7 +330,7 @@ void ClientApp::finish()
     ApplicationBase::finish();
 }
 
-void ClientApp::handleStartOperation(LifecycleOperation *operation)
+void ClientAppNoCoord::handleStartOperation(LifecycleOperation *operation)
 {
     simtime_t start = std::max(startTime, simTime());
 
@@ -317,7 +340,7 @@ void ClientApp::handleStartOperation(LifecycleOperation *operation)
     }
 }
 
-void ClientApp::handleStopOperation(LifecycleOperation *operation)
+void ClientAppNoCoord::handleStopOperation(LifecycleOperation *operation)
 {
     if (timerNext)
         cancelEvent(timerNext);
@@ -326,7 +349,7 @@ void ClientApp::handleStopOperation(LifecycleOperation *operation)
     delayActiveOperationFinish(par("stopOperationTimeout"));
 }
 
-void ClientApp::handleCrashOperation(LifecycleOperation *operation)
+void ClientAppNoCoord::handleCrashOperation(LifecycleOperation *operation)
 {
     if (timerNext)
         cancelEvent(timerNext);
