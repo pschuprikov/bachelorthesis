@@ -1,3 +1,29 @@
+# bear
+
+bear_config.json
+
+# ignore binary files
+out/
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.exe
+*.o
+*.obj
+*.pdb
+*.idb
+*.manifest
+.qtenv.ini
+.qtenvrc
+.tkenvrc
+.tkenvlog
+.cmdenv-log
+netanim-trace.txt
+*.out
+src/Test
+src/Test_dbg
 
 # Created by https://www.toptal.com/developers/gitignore/api/eclipse
 # Edit at https://www.toptal.com/developers/gitignore?templates=eclipse
