@@ -129,6 +129,12 @@ void ReplicaApp::processStart()
     socket.bind(localPort);
     setSocketOptions();
 
+    bool joinLocalMulticastGroups = par("joinLocalMulticastGroups");
+    if (joinLocalMulticastGroups) {
+        MulticastGroupList mgl = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this)->collectMulticastGroups();
+        socket.joinLocalMulticastGroups(mgl);
+    }
+
     const char *destAddrs = par("destAddresses");
     cStringTokenizer tokenizer(destAddrs);
     const char *token;
@@ -160,7 +166,7 @@ void ReplicaApp::processStop()
 
 Packet *ReplicaApp::createCommitResponsePacket(int transactionId,  msgType type)
 {
-    Packet *pk = new Packet(msgName);
+    Packet *pk = new Packet();
 
     const auto& payload = makeShared<ApplicationPacket>();
     long msgByteLength = *messageLengthPar;
@@ -185,10 +191,10 @@ Packet *ReplicaApp::createCommitResponsePacket(int transactionId,  msgType type)
         pk->addPar("Value") = vote;
 
     } else if (type == ACKNOWLEDGE) {
-        sprintf(msgName, "ACK-T%d", transactionId, vote);
+        sprintf(msgName, "ACK-T%d", transactionId);
     }
 
-
+    pk->setName(msgName);
 
     return pk;
 }
@@ -206,7 +212,7 @@ void ReplicaApp::processPacket(Packet *pk)
     switch (pk->par("Type").longValue()) {
         case PREPARE: {
             currentlyProcessing++;
-            Packet * toSend = createCommitResponsePacket(pk->par("TransactionId").longValue());
+            Packet * toSend = createCommitResponsePacket(pk->par("TransactionId").longValue(), VOTE);
             socket.sendTo(toSend, destAddr, destPort);
             break;
         }

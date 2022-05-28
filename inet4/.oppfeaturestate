@@ -5,48 +5,30 @@
     <feature id="TCP_lwIP" enabled="false"/>
     <feature id="TCP_NSC" enabled="false"/>
     <feature id="IPv4" enabled="true"/>
-    <feature id="INET_examples" enabled="true"/>
     <feature id="IPv6" enabled="true"/>
-    <feature id="IPv6_examples" enabled="true"/>
     <feature id="xMIPv6" enabled="true"/>
-    <feature id="xMIPv6_examples" enabled="true"/>
     <feature id="Nexthop" enabled="true"/>
     <feature id="WiseRoute" enabled="true"/>
     <feature id="Flooding" enabled="true"/>
     <feature id="UDP" enabled="true"/>
     <feature id="RTP" enabled="true"/>
-    <feature id="RTP_examples" enabled="true"/>
     <feature id="SCTP" enabled="true"/>
-    <feature id="SCTP_examples" enabled="true"/>
     <feature id="DHCP" enabled="true"/>
-    <feature id="DHCP_examples" enabled="true"/>
     <feature id="Ethernet" enabled="true"/>
-    <feature id="Ethernet_examples" enabled="true"/>
     <feature id="PPP" enabled="true"/>
     <feature id="ExternalInterface" enabled="false"/>
-    <feature id="ExternalInterface_examples" enabled="false"/>
     <feature id="MPLS" enabled="true"/>
-    <feature id="MPLS_examples" enabled="true"/>
     <feature id="OSPFv2" enabled="true"/>
-    <feature id="OSPFv2_examples" enabled="true"/>
     <feature id="OSPFv3" enabled="true"/>
-    <feature id="OSPFv3_examples" enabled="true"/>
     <feature id="BGPv4" enabled="true"/>
-    <feature id="BGPv4_examples" enabled="true"/>
     <feature id="PIM" enabled="true"/>
-    <feature id="PIM_examples" enabled="true"/>
     <feature id="DYMO" enabled="true"/>
     <feature id="AODV" enabled="true"/>
-    <feature id="AODV_examples" enabled="true"/>
     <feature id="DSDV" enabled="true"/>
     <feature id="GPSR" enabled="true"/>
     <feature id="RIP" enabled="true"/>
-    <feature id="RIP_examples" enabled="true"/>
-    <feature id="MANET_examples" enabled="true"/>
     <feature id="mobility" enabled="true"/>
-    <feature id="mobility_examples" enabled="true"/>
     <feature id="physicalenvironment" enabled="true"/>
-    <feature id="physicalenvironment_examples" enabled="true"/>
     <feature id="power" enabled="true"/>
     <feature id="radio" enabled="true"/>
     <feature id="Ieee80211" enabled="true"/>
@@ -54,33 +36,17 @@
     <feature id="apskradio" enabled="true"/>
     <feature id="ackingwireless" enabled="true"/>
     <feature id="shortcut" enabled="true"/>
-    <feature id="wireless_examples" enabled="true"/>
     <feature id="visualization" enabled="true"/>
     <feature id="VoIPStream" enabled="false"/>
-    <feature id="VoIPStream_examples" enabled="false"/>
     <feature id="SimpleVoIP" enabled="true"/>
-    <feature id="SimpleVoIP_examples" enabled="true"/>
     <feature id="HttpTools" enabled="true"/>
-    <feature id="HttpTools_examples_direct" enabled="true"/>
-    <feature id="HttpTools_examples_socket" enabled="true"/>
     <feature id="DiffServ" enabled="true"/>
-    <feature id="DiffServ_examples" enabled="true"/>
     <feature id="InternetCloud" enabled="true"/>
-    <feature id="InternetCloud_examples" enabled="true"/>
     <feature id="Ieee8021d" enabled="true"/>
-    <feature id="Ieee8021d_examples" enabled="true"/>
     <feature id="TUN" enabled="true"/>
     <feature id="packetdrill" enabled="true"/>
     <feature id="BMAC" enabled="true"/>
     <feature id="LMAC" enabled="true"/>
     <feature id="XMAC" enabled="true"/>
     <feature id="CsmaCaMac" enabled="true"/>
-    <feature id="wirelesstutorial" enabled="true"/>
-    <feature id="configuratortutorial" enabled="true"/>
-    <feature id="general_showcases" enabled="true"/>
-    <feature id="mobility_showcases" enabled="true"/>
-    <feature id="routing_showcases" enabled="true"/>
-    <feature id="emulation_showcases" enabled="false"/>
-    <feature id="visualizer_showcases" enabled="true"/>
-    <feature id="wireless_showcases" enabled="true"/>
 </featurestates>

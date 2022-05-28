@@ -72,20 +72,15 @@ module Hosts
         inout hosts[int((k^3)/4)];
        
     submodules:
-        client[clients]: StandardHost {
-            multicastForwarding = true;
-        }
+        client[clients]: StandardHost;
         
         clientSwitch: Router {
             multicastForwarding = true;
         }
         
-        coordinator: StandardHost {
-            multicastForwarding = true;
-        }
-        replica[int(((k^3)/4)-2)]: StandardHost {
-            multicastForwarding = true;
-        }
+        coordinator: StandardHost;
+
+        replica[int(((k^3)/4)-2)]: StandardHost;
     connections:
         clientSwitch.ethg++ <--> SwitchToSwitch <--> hosts[0];
         
@@ -110,7 +105,9 @@ network KFatTreeNew
         int clients;
 
     submodules:
-        coreSwitch[int((k/2)^2)]: Router;
+        coreSwitch[int((k/2)^2)]: Router {
+            multicastForwarding = true;
+        }
         pod[k]: Pod2 {
             k = k;
         }
