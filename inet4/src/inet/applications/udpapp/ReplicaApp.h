@@ -64,7 +64,7 @@ class INET_API ReplicaApp : public ApplicationBase, public UdpSocket::ICallback
     virtual void finish() override;
     virtual void refreshDisplay() const override;
 
-    virtual Packet* createCommitResponsePacket(int transactionID);
+    virtual Packet* createCommitResponsePacket(int transactionID, msgType type);
 
     virtual void socketDataArrived(UdpSocket *socket, Packet *packet) override;
     virtual void socketErrorArrived(UdpSocket *socket, Indication *indication) override;

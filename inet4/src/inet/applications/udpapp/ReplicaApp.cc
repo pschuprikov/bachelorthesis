@@ -160,7 +160,28 @@ void ReplicaApp::processStop()
 
 Packet *ReplicaApp::createCommitResponsePacket(int transactionId,  msgType type)
 {
-    Packet *pk = new Packet(msgName);
+
+
+
+
+
+    char msgName[32];
+    Packet *pk;
+
+    if (type == VOTE) {
+        int simultaneousTransactions = currentlyProcessing > 0 ? currentlyProcessing : 1;
+        bool vote = cComponent::uniform(0, 1) >= pow(0.09 * simultaneousTransactions,2)+0.05; //randomly decide whether transaction can be prepared
+
+        sprintf(msgName, "Vote-T%d [%d]", transactionId, vote);
+        pk = new Packet(msgName);
+        pk->addPar("Value") = vote;
+
+    } else if (type == ACKNOWLEDGE) {
+        sprintf(msgName, "ACK-T%d", transactionId);
+         pk = new Packet(msgName);
+    }
+
+
 
     const auto& payload = makeShared<ApplicationPacket>();
     long msgByteLength = *messageLengthPar;
@@ -172,22 +193,6 @@ Packet *ReplicaApp::createCommitResponsePacket(int transactionId,  msgType type)
     pk->addPar("TransactionId") = transactionId;
     pk->addPar("Type")  = type;
     pk->addPar("msgId") = numSent;
-
-
-    char msgName[32];
-
-    if (type == VOTE) {
-        int simultaneousTransactions = currentlyProcessing > 0 ? currentlyProcessing : 1;
-        bool vote = cComponent::uniform(0, 1) >= pow(0.09 * simultaneousTransactions,2)+0.05; //randomly decide whether transaction can be prepared
-
-        sprintf(msgName, "Vote-T%d [%d]", transactionId, vote);
-
-        pk->addPar("Value") = vote;
-
-    } else if (type == ACKNOWLEDGE) {
-        sprintf(msgName, "ACK-T%d", transactionId, vote);
-    }
-
 
 
     return pk;
@@ -206,7 +211,7 @@ void ReplicaApp::processPacket(Packet *pk)
     switch (pk->par("Type").longValue()) {
         case PREPARE: {
             currentlyProcessing++;
-            Packet * toSend = createCommitResponsePacket(pk->par("TransactionId").longValue());
+            Packet * toSend = createCommitResponsePacket(pk->par("TransactionId").longValue(), VOTE);
             socket.sendTo(toSend, destAddr, destPort);
             break;
         }
