@@ -33,6 +33,7 @@ simple CoordApp like IApp
         int destPort;
         bool receiveBroadcast = default(false); // if true, makes the socket receive broadcast packets
         
+        int numReplicas;
         string destAddresses;
         
         volatile int messageLength @unit(B);

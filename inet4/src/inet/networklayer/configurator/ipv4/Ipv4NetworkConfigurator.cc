@@ -239,7 +239,7 @@ void Ipv4NetworkConfigurator::configureRoutingTable(Node *node)
         clone->setSource(original->getSource());
         clone->setOrigin(original->getOrigin());
         clone->setOriginNetmask(original->getOriginNetmask());
-        clone->setInInterface(original->getInInterface());
+        clone->setInInterface(new IMulticastRoute::InInterface(original->getInInterface()->getInterface()));
         clone->setMulticastGroup(original->getMulticastGroup());
         for (size_t j = 0; j < original->getNumOutInterfaces(); j++)
             clone->addOutInterface(new IMulticastRoute::OutInterface(*original->getOutInterface(j)));
@@ -278,7 +278,7 @@ void Ipv4NetworkConfigurator::configureRoutingTable(Node *node, InterfaceEntry *
             clone->setSource(original->getSource());
             clone->setOrigin(original->getOrigin());
             clone->setOriginNetmask(original->getOriginNetmask());
-            clone->setInInterface(original->getInInterface());
+            clone->setInInterface(new IMulticastRoute::InInterface(original->getInInterface()->getInterface()));
             clone->setMulticastGroup(original->getMulticastGroup());
             for (size_t j = 0; j < original->getNumOutInterfaces(); j++)
                 clone->addOutInterface(new IMulticastRoute::OutInterface(*original->getOutInterface(j)));

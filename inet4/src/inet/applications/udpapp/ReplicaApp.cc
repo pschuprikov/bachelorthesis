@@ -129,6 +129,12 @@ void ReplicaApp::processStart()
     socket.bind(localPort);
     setSocketOptions();
 
+    bool joinLocalMulticastGroups = par("joinLocalMulticastGroups");
+    if (joinLocalMulticastGroups) {
+        MulticastGroupList mgl = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this)->collectMulticastGroups();
+        socket.joinLocalMulticastGroups(mgl);
+    }
+
     const char *destAddrs = par("destAddresses");
     cStringTokenizer tokenizer(destAddrs);
     const char *token;
@@ -160,11 +166,6 @@ void ReplicaApp::processStop()
 
 Packet *ReplicaApp::createCommitResponsePacket(int transactionId,  msgType type)
 {
-
-
-
-
-
     char msgName[32];
     Packet *pk;
 
@@ -181,7 +182,7 @@ Packet *ReplicaApp::createCommitResponsePacket(int transactionId,  msgType type)
          pk = new Packet(msgName);
     }
 
-
+    pk->setName(msgName);
 
     const auto& payload = makeShared<ApplicationPacket>();
     long msgByteLength = *messageLengthPar;

@@ -140,7 +140,7 @@ void CoordApp::processStart()
         }
     }
 
-    numReplicas = destAddresses.size();
+    numReplicas = par("numReplicas");
 
     if (stopTime >= SIMTIME_ZERO) {
         selfMsg->setKind(STOP);
@@ -212,7 +212,7 @@ void CoordApp::processPacket(Packet *pk)
                 if (pk->par("Value").boolValue()) {
                     currentTransactions[transactionId]++; //increase votes for the transaction
 
-                    EV_INFO << "Received "<< currentTransactions[transactionId] << " votes for: " << transactionId << endl;
+                    EV_INFO << "Received "<< currentTransactions[transactionId] << " out of " << numReplicas << " votes for: " << transactionId << endl;
 
                     if (currentTransactions[transactionId] == numReplicas) {
                         //successfulTransactions.insert(transactionId);
