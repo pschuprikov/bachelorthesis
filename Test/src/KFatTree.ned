@@ -15,7 +15,7 @@
 
 // Created: 2022-3-15 for project Test
 
-package test;
+package test2;
 
 
 import inet.node.inet.Router;

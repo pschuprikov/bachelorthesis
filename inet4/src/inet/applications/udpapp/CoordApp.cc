@@ -201,7 +201,7 @@ void CoordApp::processPacket(Packet *pk)
     switch (pk->par("Type").longValue()) {
 
         case REQUEST: {
-            clientAddress = pk->getTag<L3AddressInd>()->getSrcAddress();
+            clientAddress[transactionId] = pk->getTag<L3AddressInd>()->getSrcAddress();
             currentTransactions[transactionId] = 0; //add key to map with 0 votes
             broadcastToReplicas(transactionId, PREPARE);
             break;
@@ -215,13 +215,13 @@ void CoordApp::processPacket(Packet *pk)
                     EV_INFO << "Received "<< currentTransactions[transactionId] << " out of " << numReplicas << " votes for: " << transactionId << endl;
 
                     if (currentTransactions[transactionId] == numReplicas) {
-                        //successfulTransactions.insert(transactionId);
+                        //socket.sendTo(createPacket(transactionId, RESPONSE, true), clientAddress[transactionId], destPort); //send response to client - done after acknowledgements
                         currentTransactions[transactionId] = 0; //reset counter to count ack
                         broadcastToReplicas(transactionId, COMMIT, true);
                     }
                 } else {
                     EV_INFO << "Received NO vote " << endl;
-                    socket.sendTo(createPacket(transactionId, RESPONSE, false), clientAddress, destPort);
+                    socket.sendTo(createPacket(transactionId, RESPONSE, false), clientAddress[transactionId], destPort);
                     currentTransactions.erase(transactionId);
                     broadcastToReplicas(transactionId, COMMIT, false);
                 }
@@ -231,9 +231,11 @@ void CoordApp::processPacket(Packet *pk)
         }
 
         case ACKNOWLEDGE: {
-            socket.sendTo(createPacket(transactionId, RESPONSE, true), clientAddress, destPort);
-            currentTransactions.erase(transactionId);
-
+            currentTransactions[transactionId]++;
+            if (currentTransactions[transactionId] == numReplicas) {
+                socket.sendTo(createPacket(transactionId, RESPONSE, true), clientAddress[transactionId], destPort);
+                currentTransactions.erase(transactionId);
+            }
             break;
         }
 

@@ -49,7 +49,6 @@ class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::I
     std::map<int, bool> decided;
 
 
-    static int replicaIds;
     int thisId;
 
     cPar *messageLengthPar = nullptr;

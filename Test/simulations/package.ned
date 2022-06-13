@@ -1,3 +1,3 @@
-package test.simulations;
+package test2.simulations;
 
 @license(LGPL);

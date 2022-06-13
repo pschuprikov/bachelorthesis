@@ -29,7 +29,6 @@ namespace inet {
 
 Define_Module(ReplicaAppBroadcast);
 
-int ReplicaAppBroadcast::replicaIds = 0;
 
 ReplicaAppBroadcast::~ReplicaAppBroadcast()
 {
@@ -55,7 +54,7 @@ void ReplicaAppBroadcast::initialize(int stage)
         stopTime = par("stopTime");
         messageLengthPar = &par("messageLength");
 
-        thisId = replicaIds++;
+        thisId = par("thisId");
 
         if (stopTime >= SIMTIME_ZERO && stopTime < startTime)
             throw cRuntimeError("Invalid startTime/stopTime parameters");
@@ -134,6 +133,12 @@ void ReplicaAppBroadcast::processStart()
     socket.bind(localPort);
     setSocketOptions();
 
+    bool joinLocalMulticastGroups = par("joinLocalMulticastGroups");
+    if (joinLocalMulticastGroups) {
+        MulticastGroupList mgl = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this)->collectMulticastGroups();
+        socket.joinLocalMulticastGroups(mgl);
+    }
+
     const char *destAddrs = par("destAddresses");
     cStringTokenizer tokenizer(destAddrs);
     const char *token;
@@ -167,7 +172,7 @@ Packet *ReplicaAppBroadcast::createVotePacket(int transactionId, bool vote)
 {
     char msgName[32];
 
-    sprintf(msgName, "Vote-T%d [%d]", transactionId, vote);
+    sprintf(msgName, "Vote-T%d [%d] - ID%d", transactionId, vote, thisId);
 
     Packet *pk = new Packet(msgName);
 
@@ -191,14 +196,14 @@ Packet *ReplicaAppBroadcast::createVotePacket(int transactionId, bool vote)
 
 void ReplicaAppBroadcast::broadcastAll(int transactionId) {
 
+
+
     int simultaneousTransactions = currentlyProcessing > 0 ? currentlyProcessing : 1;
 
     bool vote = cComponent::uniform(0, 1) >= pow(0.09 * simultaneousTransactions,2)+0.05; //randomly decide whether transaction can be prepared
 
-    for(auto addr : destAddresses) {
-        Packet * toSend = createVotePacket(transactionId, vote);
-        socket.sendTo(toSend, addr, destPort);
-    }
+    Packet * toSend = createVotePacket(transactionId, vote);
+    socket.sendTo(toSend, destAddr, destPort);
 }
 
 
@@ -220,6 +225,7 @@ void ReplicaAppBroadcast::processPacket(Packet *pk)
         }
 
         case VOTE: {
+            EV_INFO << "RECEIVED VOTEYBOI: " << UdpSocket::getReceivedPacketInfo(pk) << endl;
             if (pk->par("Type").longValue() == VOTE){
                 int transactionId = pk->par("TransactionId").longValue();
                 int replicaId = pk->par("replicaId").longValue();

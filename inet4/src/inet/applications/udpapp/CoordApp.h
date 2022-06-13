@@ -44,7 +44,7 @@ class INET_API CoordApp : public ApplicationBase, public UdpSocket::ICallback
     cMessage *selfMsg = nullptr;
     int numReceived, numSent = 0;
     std::map<int, int> currentTransactions; //  (id , responses)
-    L3Address clientAddress;
+    std::map<int, L3Address> clientAddress;
 
 
     cPar *messageLengthPar = nullptr;

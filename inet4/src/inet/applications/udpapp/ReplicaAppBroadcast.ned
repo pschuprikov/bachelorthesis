@@ -31,6 +31,7 @@ simple ReplicaAppBroadcast like IApp
         double stopTime @unit(s) = default(-1s);  // time of finishing receiving
         int localPort;
         int destPort;
+        int thisId;
         bool receiveBroadcast = default(false); // if true, makes the socket receive broadcast packets
         
         string destAddresses;
@@ -41,6 +42,7 @@ simple ReplicaAppBroadcast like IApp
         @lifecycleSupport;
         double stopOperationExtraTime @unit(s) = default(-1s);    // extra time after lifecycle stop operation finished
         double stopOperationTimeout @unit(s) = default(2s);    // timeout value for lifecycle stop operation
+        bool joinLocalMulticastGroups = default(false);   
         @signal[packetReceived](type=inet::Packet);
         @statistic[packetReceived](title="packets received"; source=packetReceived; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);
         @statistic[throughput](title="throughput"; unit=bps; source="throughput(packetReceived)"; record=vector);

@@ -179,7 +179,7 @@ Packet *ReplicaApp::createCommitResponsePacket(int transactionId,  msgType type)
 
     } else if (type == ACKNOWLEDGE) {
         sprintf(msgName, "ACK-T%d", transactionId);
-         pk = new Packet(msgName);
+        pk = new Packet(msgName);
     }
 
     pk->setName(msgName);
@@ -219,7 +219,12 @@ void ReplicaApp::processPacket(Packet *pk)
 
         case COMMIT: {
             currentlyProcessing--;
-            //SHOULD ADD THE ACKNOWLEDGEMENT
+
+            //only acknowledge if told to commit
+            if (pk->par("Value").boolValue()) {
+                Packet * toSend = createCommitResponsePacket(pk->par("TransactionId").longValue(), ACKNOWLEDGE);
+                socket.sendTo(toSend, destAddr, destPort);
+            }
             break;
         }
 

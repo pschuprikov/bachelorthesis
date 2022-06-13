@@ -15,7 +15,7 @@
 
 // Created: 2022-3-15 for project Test
 
-package test;
+package test2;
 
 import ned.DatarateChannel;
 import inet.node.inet.Router;
@@ -32,12 +32,8 @@ module HostsNoCoord
         inout hosts[int((k^3)/4)];
        
     submodules:
-        client: StandardHost {
-            multicastForwarding = true;
-        }
-        replica[int(((k^3)/4)-1)]: StandardHost {
-            multicastForwarding = true;
-        }
+        client: StandardHost;
+        replica[int(((k^3)/4)-1)]: StandardHost;
     connections:
         client.ethg++ <--> hosts[0];
         
@@ -55,7 +51,9 @@ network KFatTreeAsync
         int k;
 
     submodules:
-        coreSwitch[int((k/2)^2)]: Router;
+        coreSwitch[int((k/2)^2)]: Router {
+            multicastForwarding = true;
+        }
         pod[k]: Pod2 {
             k = k;
         }

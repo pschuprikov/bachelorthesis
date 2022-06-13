@@ -241,17 +241,6 @@ void ClientApp::refreshDisplay() const
 
 void ClientApp::processPacket(Packet *pk)
 {
-    if (pk->par("Type").longValue() == RESPONSE){
-        if (pk->par("Value").boolValue()) {
-            emit(registerSignal("successfulCommit"), ++successfulCommit);
-        } else {
-            emit(registerSignal("successfulCommit"), successfulCommit);
-            //sendQuery(pk->par("TransactionId").longValue());
-        }
-        //schedule next sending
-        scheduleAt(simTime()+ *sendIntervalPar, timerNext);
-    }
-
 
     if (pk->getKind() == UDP_I_ERROR) {
         EV_WARN << "UDP error received\n";
@@ -290,6 +279,17 @@ void ClientApp::processPacket(Packet *pk)
             return;
         }
     }
+
+    if (pk->par("Type").longValue() == RESPONSE){
+            if (pk->par("Value").boolValue()) {
+                emit(registerSignal("successfulCommit"), ++successfulCommit);
+            } else {
+                emit(registerSignal("successfulCommit"), successfulCommit);
+                //sendQuery(pk->par("TransactionId").longValue());
+            }
+            //schedule next sending
+            scheduleAt(simTime()+ *sendIntervalPar, timerNext);
+        }
 
     EV_INFO << "Received packet: " << UdpSocket::getReceivedPacketInfo(pk) << endl;
     emit(packetReceivedSignal, pk);
