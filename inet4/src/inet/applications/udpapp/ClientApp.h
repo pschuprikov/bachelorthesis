@@ -71,6 +71,8 @@ class INET_API ClientApp : public ApplicationBase, public UdpSocket::ICallback
     bool haveSleepDuration = false;
     bool dontFragment = false;
 
+    simtime_t lastSent;
+
     bool joinLocalMulticastGroups;
 
     // statistics:

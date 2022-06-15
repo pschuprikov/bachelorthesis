@@ -179,7 +179,7 @@ void ClientApp::sendQuery(int transId)
     pk->setTimestamp();
     emit(packetSentSignal, pk);
     socket.sendTo(pk, destAddr, destPort);
-
+    lastSent = simTime();
 }
 
 void ClientApp::processStop()
@@ -281,6 +281,7 @@ void ClientApp::processPacket(Packet *pk)
     }
 
     if (pk->par("Type").longValue() == RESPONSE){
+            emit(registerSignal("transactionLatency"), (simTime() - lastSent));
             if (pk->par("Value").boolValue()) {
                 emit(registerSignal("successfulCommit"), ++successfulCommit);
             } else {

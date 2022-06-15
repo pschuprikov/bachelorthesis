@@ -176,7 +176,7 @@ void ClientAppNoCoord::processSend()
 }
 
 void ClientAppNoCoord::broadcastAll(int transactionId) {
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 2; i < 6; ++i) {
         Packet * toSend = createPreparePacket(transactionId);
         socket.sendTo(toSend, destAddresses[i], destPort);
     }

@@ -128,6 +128,7 @@ simple ClientApp like IApp
         @signal[packetSent](type=inet::Packet);
         @signal[packetReceived](type=inet::Packet);
         @signal[successfulCommit](type=long);
+        @signal[transactionLatency](type=long);
         @signal[packetDropped](type=inet::Packet);
         @signal[outOfOrderPk](type=inet::Packet);
         
@@ -137,6 +138,7 @@ simple ClientApp like IApp
         @statistic[outOfOrderPk](title="packets received out of order"; source=outOfOrderPk; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);
         @statistic[endToEndDelay](title="delay"; source="dataAge(packetReceived)"; unit=s; record=histogram,vector; interpolationmode=none);
         @statistic[successfulCommit](title="successful commits"; source=successfulCommit; record=count, vector; interpolationmode=none);
+        @statistic[transactionLatency](title="transaction latency"; source=transactionLatency; record=count, vector, stats; interpolationmode=none);
     gates:
         input socketIn @labels(UdpControlInfo/up);
         output socketOut @labels(UdpControlInfo/down);

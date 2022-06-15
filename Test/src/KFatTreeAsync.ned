@@ -29,11 +29,11 @@ module HostsNoCoord
     parameters: 
         int k;
     gates:
-        inout hosts[int((k^3)/4)];
+        inout hosts[int((k^3)/4)-1];
        
     submodules:
         client: StandardHost;
-        replica[int(((k^3)/4)-1)]: StandardHost;
+        replica[int(((k^3)/4)-2)]: StandardHost;
     connections:
         client.ethg++ <--> hosts[0];
         

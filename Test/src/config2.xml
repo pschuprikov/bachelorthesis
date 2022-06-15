@@ -1,11 +1,9 @@
 <config>
     <interface hosts="**" address="10.x.x.x" netmask="255.x.x.0"/>
     <multicast-group hosts="**.replica[*]" address="224.0.1.3"/>    
-    <multicast-route hosts="**.pod[*].edgeSwitch[*]" groups="224.0.1.3" parent="eth0" children="eth1 eth2 eth3"/>
-    <multicast-route hosts="**.pod[*].edgeSwitch[*]" groups="224.0.1.3" parent="eth1" children="eth0 eth2 eth3"/>
-    <multicast-route hosts="**.pod[*].edgeSwitch[*]" groups="224.0.1.3" parent="eth2" children="eth0 eth1 eth3"/>
-    <multicast-route hosts="**.pod[*].edgeSwitch[*]" groups="224.0.1.3" parent="eth3" children="eth0 eth1 eth2"/>
-    <multicast-route hosts="**.pod[*].aggregateSwitch[*]" groups="224.0.1.3" parent="eth3" children="eth0 eth2"/>
-    <multicast-route hosts="**.pod[*].aggregateSwitch[*]" groups="224.0.1.3" parent="eth0" children="eth2 eth3"/>
-    <multicast-route hosts="*.coreSwitch[0]" groups="224.0.1.3" parent="eth0" children="eth1 eth2 eth3"/>
+    <multicast-route hosts="**.pod[*].edgeSwitch[*]" groups="224.0.1.3" parent="eth0" children="eth2"/>
+    <multicast-route hosts="**.pod[*].edgeSwitch[*]" groups="224.0.1.3" parent="eth1" children="eth2"/>
+    <multicast-route hosts="**.pod[*].edgeSwitch[*]" groups="224.0.1.3" parent="eth2" children="eth0 eth1"/>
+    <multicast-route hosts="**.pod[*].aggregateSwitch[0]" groups="224.0.1.3" parent="eth2" children="eth3"/>
+    <multicast-route hosts="**.pod[*].aggregateSwitch[0]" groups="224.0.1.3" parent="eth3" children="eth2"/>
 </config>
