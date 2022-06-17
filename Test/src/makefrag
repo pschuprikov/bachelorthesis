@@ -13,3 +13,8 @@ ifeq ($(PLATFORM),win32.x86_64)
   LDFLAGS := $(filter-out $(ENABLE_AUTO_IMPORT), $(LDFLAGS))
 
 endif
+
+run:
+	opp_run -n $(INET4_PROJ)/src:. -l $(INET4_PROJ)/src/INET$(D)
+
+.PHONY: run
