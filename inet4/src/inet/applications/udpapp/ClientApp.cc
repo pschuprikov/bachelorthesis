@@ -281,16 +281,16 @@ void ClientApp::processPacket(Packet *pk)
     }
 
     if (pk->par("Type").longValue() == RESPONSE){
-            emit(registerSignal("transactionLatency"), (simTime() - lastSent));
-            if (pk->par("Value").boolValue()) {
-                emit(registerSignal("successfulCommit"), ++successfulCommit);
-            } else {
-                emit(registerSignal("successfulCommit"), successfulCommit);
-                //sendQuery(pk->par("TransactionId").longValue());
-            }
-            //schedule next sending
-            scheduleAt(simTime()+ *sendIntervalPar, timerNext);
+        emit(registerSignal("transactionLatency"), (simTime() - lastSent));
+        if (pk->par("Value").boolValue()) {
+            emit(registerSignal("successfulCommit"), ++successfulCommit);
+        } else {
+            emit(registerSignal("successfulCommit"), successfulCommit);
+            //sendQuery(pk->par("TransactionId").longValue());
         }
+        //schedule next sending
+        scheduleAt(simTime()+ *sendIntervalPar, timerNext);
+    }
 
     EV_INFO << "Received packet: " << UdpSocket::getReceivedPacketInfo(pk) << endl;
     emit(packetReceivedSignal, pk);

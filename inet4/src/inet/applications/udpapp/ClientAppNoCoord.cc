@@ -170,13 +170,12 @@ void ClientAppNoCoord::processSend()
 {
     if (stopTime < SIMTIME_ZERO || simTime() < stopTime) {
         //sendQuery(transactionID++);
-        lastSent = simTime();
         broadcastAll(transactionID++);
     }
 }
 
 void ClientAppNoCoord::broadcastAll(int transactionId) {
-    for (int i = 2; i < 6; ++i) {
+    for (int i = 0; i < 1; ++i) {
         Packet * toSend = createPreparePacket(transactionId);
         socket.sendTo(toSend, destAddresses[i], destPort);
     }
@@ -193,7 +192,8 @@ void ClientAppNoCoord::sendQuery(int transId)
     pk->setTimestamp();
     emit(packetSentSignal, pk);
     socket.sendTo(pk, destAddr, destPort);
-
+    lastSent = simTime();
+    responsesReceived[transId] = 0;
 }
 
 void ClientAppNoCoord::processStop()
@@ -255,29 +255,31 @@ void ClientAppNoCoord::refreshDisplay() const
 
 void ClientAppNoCoord::processPacket(Packet *pk)
 {
-    if (pk->par("Type").longValue() == VOTE){
-        EV_DEBUG << "Received vote" << endl;
-        int transactionId = pk->par("TransactionId").longValue();
-        int replicaId = pk->par("replicaId").longValue();
-        transactions[transactionId].insert(replicaId);
-
-        if (decided[transactionId]!=true) {
-
-            if (pk->par("Value").boolValue() && //vote yes
-                    transactions[transactionId].size() < destAddresses.size()) { //not all votes
-                decided[transactionId] = false;
-            } else {
-                decided[transactionId] = true;
-                simtime_t returnTime = simTime() - lastSent;
-                EV_DEBUG << "Time till response: " << returnTime << endl;
-                maxReturnTime = maxReturnTime > returnTime ? maxReturnTime : returnTime;
-                EV_DEBUG << "Max time till response: " << maxReturnTime << endl;
-                //schedule next sending
-                scheduleAt(simTime()+ *sendIntervalPar, timerNext);
-            }
-        }
-
-    }
+//    if (pk->par("Type").longValue() == VOTE){
+//        EV_DEBUG << "Received vote" << endl;
+//
+//
+//        EV_DEBUG << "Received vote" << endl;
+//        int transactionId = pk->par("TransactionId").longValue();
+//        int replicaId = pk->par("replicaId").longValue();
+//        transactions[transactionId].insert(replicaId);
+//
+//        if (decided[transactionId]!=true) {
+//
+//            if (pk->par("Value").boolValue() && //vote yes
+//                    transactions[transactionId].size() < destAddresses.size()) { //not all votes
+//                decided[transactionId] = false;
+//            } else {
+//                decided[transactionId] = true;
+//                simtime_t returnTime = simTime() - lastSent;
+//                EV_DEBUG << "Time till response: " << returnTime << endl;
+//                maxReturnTime = maxReturnTime > returnTime ? maxReturnTime : returnTime;
+//                EV_DEBUG << "Max time till response: " << maxReturnTime << endl;
+//                //schedule next sending
+//                scheduleAt(simTime()+ *sendIntervalPar, timerNext);
+//            }
+//        }
+//    }
 
 
     if (pk->getKind() == UDP_I_ERROR) {
@@ -316,6 +318,31 @@ void ClientAppNoCoord::processPacket(Packet *pk)
             numDeleted++;
             return;
         }
+    }
+
+    if (pk->par("Type").longValue() == RESPONSE) {
+        int transactionId = pk->par("TransactionId").longValue();
+        responsesReceived[transactionId]++;
+
+        EV_INFO << "RECEIVED RESPONSE " << responsesReceived[transactionId] << endl;
+
+        if (responsesReceived[transactionId] == 1){
+            emit(registerSignal("transactionLatency"), (simTime() - lastSent));
+
+            if (pk->par("Value").boolValue()) {
+                emit(registerSignal("successfulCommit"), ++successfulCommit);
+            } else {
+                emit(registerSignal("successfulCommit"), successfulCommit);
+                //sendQuery(pk->par("TransactionId").longValue()); //retry transaction
+            }
+            scheduleAt(simTime()+ *sendIntervalPar, timerNext);
+        }
+
+        if (responsesReceived[transactionId] == destAddresses.size()) {
+            EV_INFO << "RECEIVED ALL RESPONSES FOR T" << transactionId << endl;
+        }
+
+
     }
 
     EV_INFO << "Received packet: " << UdpSocket::getReceivedPacketInfo(pk) << endl;

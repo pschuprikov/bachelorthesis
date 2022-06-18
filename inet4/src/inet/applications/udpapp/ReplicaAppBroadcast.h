@@ -23,17 +23,70 @@
 
 #include "inet/applications/base/ApplicationBase.h"
 #include "inet/transportlayer/contract/udp/UdpSocket.h"
+#include <omnetpp.h>
 
 namespace inet {
+
+
+
 
 /**
  * Consumes and prints packets received from the Udp module. See NED for more info.
  */
 class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::ICallback
 {
+
   protected:
-    enum SelfMsgKinds { START = 1, STOP };
-    enum msgType {REQUEST , PREPARE, VOTE, COMMIT};
+    enum SelfMsgKinds { START = 1, STOP, CHECKINBOX };
+    struct Comparator {
+        bool operator()(Packet* lhs, const Packet* rhs) const {
+            return lhs->getTimestamp() < rhs->getTimestamp();
+        };
+    };
+
+    class DelayedQueue {
+        private:
+
+            std::map<Packet*, cMessage *, Comparator> store;
+            simtime_t delay;
+
+
+        public:
+            DelayedQueue(simtime_t d) {
+                delay = d;
+            }
+
+
+            //add packet to queue with timer to open queue
+            void insert(ReplicaAppBroadcast * app,Packet * newPacket) {
+                cMessage * timer = new cMessage("CheckInbox");
+                timer->setTimestamp(delay);
+                timer->setKind(CHECKINBOX);
+                app->scheduleAt(simTime() + delay, timer);
+
+                store.insert({newPacket, timer});
+            }
+
+            //open packets older than time (removing packets from queue and cancelling timers)
+            std::vector<Packet *> openPackets(ReplicaAppBroadcast * app, simtime_t time){
+                std::vector<Packet *> foundPackets;
+
+                auto itr = store.begin();
+                while ( itr != store.end() && itr->first->getTimestamp() <= time) {
+                    //cancel timers
+                    app->cancelAndDelete(itr->second);
+
+                    foundPackets.push_back(itr->first);
+                    itr = store.erase(itr);
+                }
+                return foundPackets;
+            }
+    };
+
+
+
+
+    enum msgType {PREPARE, VOTE, RESPONSE};
 
     UdpSocket socket;
     int localPort, destPort = -1;
@@ -45,7 +98,17 @@ class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::I
     int numReceived, numSent = 0;
     int currentlyProcessing = 0;
 
-    std::map<int, std::set<int>> transactions;
+    //Packet * sorted by timestamp
+    DelayedQueue inbox = DelayedQueue(0);
+
+
+    //for debugging
+    std::vector<int> order[10];
+
+
+    std::map<int, std::set<int>> transactions; //(transactionId, set(replicasThatVoted) )
+    std::map<int, L3Address> clientAddress; // (transactionId, addressOfClient )
+
     std::map<int, bool> decided;
 
 
@@ -58,7 +121,8 @@ class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::I
     virtual ~ReplicaAppBroadcast();
 
   protected:
-    virtual void processPacket(Packet *msg);
+    virtual void processPacket(Packet *pk);
+    virtual void processVote(Packet *pk);
     virtual void setSocketOptions();
 
   protected:
@@ -68,7 +132,8 @@ class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::I
     virtual void finish() override;
     virtual void refreshDisplay() const override;
 
-    virtual Packet* createVotePacket(int transactionID, bool vote);
+    virtual Packet* createVotePacket(int transactionId, bool vote, char* clientAddress);
+    virtual void respondClient(int transactionId, bool vote);
     virtual void broadcastAll(int transactionId);
 
     virtual void socketDataArrived(UdpSocket *socket, Packet *packet) override;
@@ -84,6 +149,9 @@ class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::I
 };
 
 } // namespace inet
+
+
+
 
 #endif // ifndef __INET_UDPSINK_H
 

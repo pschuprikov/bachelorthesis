@@ -17,11 +17,13 @@
 #include "ReplicaAppBroadcast.h"
 
 #include <math.h>
+#include <string.h>
 #include "inet/applications/base/ApplicationPacket_m.h"
 #include "inet/common/ModuleAccess.h"
 #include "inet/common/TimeTag_m.h"
 #include "inet/common/packet/Packet.h"
 #include "inet/networklayer/common/FragmentationTag_m.h"
+#include "inet/networklayer/common/L3AddressTag_m.h"
 #include "inet/networklayer/common/L3AddressResolver.h"
 #include "inet/transportlayer/contract/udp/UdpControlInfo_m.h"
 
@@ -56,6 +58,8 @@ void ReplicaAppBroadcast::initialize(int stage)
 
         thisId = par("thisId");
 
+        inbox = DelayedQueue(par("receiveDelay"));
+
         if (stopTime >= SIMTIME_ZERO && stopTime < startTime)
             throw cRuntimeError("Invalid startTime/stopTime parameters");
         selfMsg = new cMessage("ReplicaAppBroadcastTimer");
@@ -65,8 +69,16 @@ void ReplicaAppBroadcast::initialize(int stage)
 void ReplicaAppBroadcast::handleMessageWhenUp(cMessage *msg)
 {
     if (msg->isSelfMessage()) {
-        ASSERT(msg == selfMsg);
-        switch (selfMsg->getKind()) {
+        //ASSERT(msg == selfMsg);
+
+        switch (msg->getKind()) {
+            case CHECKINBOX:
+                EV_INFO << "Checking inbox: "<< msg->detailedInfo() <<endl;
+
+                for (Packet * pk : inbox.openPackets(this, msg->getTimestamp())) {
+                    processVote(pk);
+                }
+                break;
             case START:
                 processStart();
                 break;
@@ -88,6 +100,7 @@ void ReplicaAppBroadcast::handleMessageWhenUp(cMessage *msg)
 void ReplicaAppBroadcast::socketDataArrived(UdpSocket *socket, Packet *packet)
 {
     // process incoming packet
+
     processPacket(packet);
 }
 
@@ -166,9 +179,7 @@ void ReplicaAppBroadcast::processStop()
    socket.close();
 }
 
-
-
-Packet *ReplicaAppBroadcast::createVotePacket(int transactionId, bool vote)
+Packet *ReplicaAppBroadcast::createVotePacket(int transactionId, bool vote, char * clientAddress)
 {
     char msgName[32];
 
@@ -183,16 +194,18 @@ Packet *ReplicaAppBroadcast::createVotePacket(int transactionId, bool vote)
     payload->addTag<CreationTimeTag>()->setCreationTime(simTime()); //difference between tag and addPar? not sure where to add transaction details
 
 
-
     pk->insertAtBack(payload);
     pk->addPar("TransactionId") = transactionId;
-    pk->addPar("replicaId") = thisId;
+    pk->addPar("ReplicaId") = thisId;
     pk->addPar("Type")  = VOTE;
     pk->addPar("Value") = vote;
     pk->addPar("msgId") = numSent;
+    pk->addPar("ClientAddress") = clientAddress;
 
     return pk;
 }
+
+
 
 void ReplicaAppBroadcast::broadcastAll(int transactionId) {
 
@@ -202,8 +215,49 @@ void ReplicaAppBroadcast::broadcastAll(int transactionId) {
 
     bool vote = cComponent::uniform(0, 1) >= pow(0.09 * simultaneousTransactions,2)+0.05; //randomly decide whether transaction can be prepared
 
-    Packet * toSend = createVotePacket(transactionId, vote);
-    socket.sendTo(toSend, destAddr, destPort);
+    if(!vote){
+        decided[transactionId] = true;
+        currentlyProcessing--;
+        respondClient(transactionId, vote);
+    }
+
+    for (auto addr : destAddresses) {
+
+        char addressStr[15];
+        strcpy(addressStr, clientAddress[transactionId].str().c_str());
+
+        Packet * toSend = createVotePacket(transactionId, vote, addressStr);
+        socket.sendTo(toSend, addr, destPort);
+    }
+
+    //for when multicast works
+//    Packet * toSend = createVotePacket(transactionId, vote);
+//    socket.sendTo(toSend, destAddr, destPort);
+}
+
+void ReplicaAppBroadcast::respondClient(int transactionId, bool vote) {
+    EV_INFO << "RESPONDING TO CLIENT T " << transactionId << endl;
+    char msgName[32];
+
+    sprintf(msgName, "Response-T%d [%d] - ID%d", transactionId, vote, thisId);
+
+    Packet *pk = new Packet(msgName);
+
+    const auto& payload = makeShared<ApplicationPacket>();
+    long msgByteLength = *messageLengthPar;
+    payload->setChunkLength(B(msgByteLength));
+    payload->setSequenceNumber(numSent);
+    payload->addTag<CreationTimeTag>()->setCreationTime(simTime()); //difference between tag and addPar? not sure where to add transaction details
+
+
+    pk->insertAtBack(payload);
+    pk->addPar("TransactionId") = transactionId;
+    pk->addPar("ReplicaId") = thisId;
+    pk->addPar("Type")  = RESPONSE;
+    pk->addPar("Value") = vote;
+    pk->addPar("msgId") = numSent;
+
+    socket.sendTo(pk, clientAddress[transactionId], destPort);
 }
 
 
@@ -212,36 +266,36 @@ void ReplicaAppBroadcast::processPacket(Packet *pk)
     EV_INFO << "Received packet: " << UdpSocket::getReceivedPacketInfo(pk) << endl;
     emit(packetReceivedSignal, pk);
 
-
+    int transactionId = pk->par("TransactionId").longValue();
 
     numReceived++;
 
     switch (pk->par("Type").longValue()) {
         case PREPARE: {
-            currentlyProcessing++;
+            //if prepare received after receiving transaction from vote (i.e. already have client address)
+            if (clientAddress.count(transactionId) != 0) {
+                delete pk;
+                return;
+            }
 
+            currentlyProcessing++;
+            clientAddress[transactionId] = pk->getTag<L3AddressInd>()->getSrcAddress();
+
+            //decide vote first then broadcast (first send to client)
             broadcastAll(pk->par("TransactionId").longValue());
             break;
         }
 
         case VOTE: {
-            EV_INFO << "RECEIVED VOTEYBOI: " << UdpSocket::getReceivedPacketInfo(pk) << endl;
-            if (pk->par("Type").longValue() == VOTE){
-                int transactionId = pk->par("TransactionId").longValue();
-                int replicaId = pk->par("replicaId").longValue();
-                transactions[transactionId].insert(replicaId);
+            int replicaId = pk->par("ReplicaId").longValue();
 
-                if (decided[transactionId]!=true) {
-                    if (pk->par("Value").boolValue() && //vote yes
-                            transactions[transactionId].size() < destAddresses.size()) { //not all votes
-                        decided[transactionId] = false;
-                    } else {
-                        decided[transactionId] = true;
-                        currentlyProcessing--;
-                    }
-                }
-
+            //don't count votes from self
+            if (replicaId != thisId) {
+                EV_INFO << "Stashing packet " << endl;
+                inbox.insert(this, pk);
+                return;
             }
+
             break;
         }
 
@@ -252,6 +306,52 @@ void ReplicaAppBroadcast::processPacket(Packet *pk)
 
     delete pk;
 }
+
+void ReplicaAppBroadcast::processVote(Packet * pk) {
+    int transactionId = pk->par("TransactionId").longValue();
+    int replicaId = pk->par("ReplicaId").longValue();
+
+
+    EV_INFO << "RECEIVED VOTE: " << UdpSocket::getReceivedPacketInfo(pk) << endl;
+
+    //debugging
+    order[transactionId].push_back(replicaId);
+
+
+    //if vote received before/without prepare
+    if (clientAddress.count(transactionId) == 0) {
+        currentlyProcessing++;
+        //add clientAddress
+        clientAddress[transactionId] = L3Address(pk->par("ClientAddress").stringValue());
+        //send vote
+        broadcastAll(pk->par("TransactionId").longValue());
+    }
+
+    transactions[transactionId].insert(replicaId);
+
+    bool vote = pk->par("Value").boolValue();
+
+    if (decided[transactionId]!=true) {
+        if (vote && transactions[transactionId].size() < destAddresses.size()-1) { //vote yes and not all votes
+            decided[transactionId] = false;
+        } else {
+
+            //print order of votes:
+            EV_INFO << "Vote Order:"<<endl;
+            for (int rep : order[transactionId]){
+                EV_INFO << rep << endl;
+            }
+
+            decided[transactionId] = true;
+            currentlyProcessing--;
+            //send vote to client
+            respondClient(transactionId, vote);
+        }
+
+    }
+    delete pk;
+}
+
 
 void ReplicaAppBroadcast::handleStartOperation(LifecycleOperation *operation)
 {

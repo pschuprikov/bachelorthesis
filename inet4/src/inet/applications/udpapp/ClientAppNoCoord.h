@@ -45,7 +45,7 @@ class INET_API ClientAppNoCoord : public ApplicationBase, public UdpSocket::ICal
 
   protected:
     enum SelfMsgKinds { START = 1, SEND, STOP };
-    enum msgType {REQUEST, PREPARE, VOTE, COMMIT, RESPONSE};
+    enum msgType {PREPARE, VOTE, RESPONSE};
 
     typedef std::map<int, int> SourceSequence;
 
@@ -87,8 +87,13 @@ class INET_API ClientAppNoCoord : public ApplicationBase, public UdpSocket::ICal
     int numDuplicated = 0;
     int successfulCommit = 0;
 
+    std::map<int, int> responsesReceived;
+
+
+    //can remove? {
     std::map<int, std::set<int>> transactions;
     std::map<int, bool> decided;
+    //}
 
     static int transactionID;
 

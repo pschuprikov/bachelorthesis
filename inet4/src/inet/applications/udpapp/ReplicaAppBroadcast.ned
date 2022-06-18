@@ -32,6 +32,7 @@ simple ReplicaAppBroadcast like IApp
         int localPort;
         int destPort;
         int thisId;
+        double receiveDelay @unit(s) = default(0s);// time to wait between receiving and opening messages
         bool receiveBroadcast = default(false); // if true, makes the socket receive broadcast packets
         
         string destAddresses;
