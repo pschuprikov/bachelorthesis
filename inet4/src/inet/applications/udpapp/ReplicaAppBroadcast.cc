@@ -73,12 +73,11 @@ void ReplicaAppBroadcast::handleMessageWhenUp(cMessage *msg)
 
         switch (msg->getKind()) {
             case CHECKINBOX:
-                EV_INFO << "Checking inbox: "<< msg->detailedInfo() <<endl;
-
                 for (Packet * pk : inbox.openPackets(this, msg->getTimestamp())) {
                     processVote(pk);
                 }
                 break;
+
             case START:
                 processStart();
                 break;
@@ -292,6 +291,7 @@ void ReplicaAppBroadcast::processPacket(Packet *pk)
             //don't count votes from self
             if (replicaId != thisId) {
                 EV_INFO << "Stashing packet " << endl;
+//                processVote(pk);
                 inbox.insert(this, pk);
                 return;
             }
@@ -311,11 +311,20 @@ void ReplicaAppBroadcast::processVote(Packet * pk) {
     int transactionId = pk->par("TransactionId").longValue();
     int replicaId = pk->par("ReplicaId").longValue();
 
+    simtime_t travelTime = pk->getCreationTime();
 
     EV_INFO << "RECEIVED VOTE: " << UdpSocket::getReceivedPacketInfo(pk) << endl;
 
+    if (travelTime < minTime) {
+        minTime = travelTime;
+        EV_INFO << "in the Min Time: " << minTime << endl;
+    } else if (travelTime > maxTime) {
+        maxTime = travelTime;
+        EV_INFO << "in the Max Time: " << minTime << endl;
+    }
+
     //debugging
-    order[transactionId].push_back(replicaId);
+//    order.push_back(replicaId);
 
 
     //if vote received before/without prepare
@@ -337,10 +346,11 @@ void ReplicaAppBroadcast::processVote(Packet * pk) {
         } else {
 
             //print order of votes:
-            EV_INFO << "Vote Order:"<<endl;
-            for (int rep : order[transactionId]){
-                EV_INFO << rep << endl;
-            }
+//            EV_INFO << "Vote Order:"<<endl;
+//            for (int rep : order){
+//                EV_INFO << rep << endl;
+//            }
+//            order.clear();
 
             decided[transactionId] = true;
             currentlyProcessing--;

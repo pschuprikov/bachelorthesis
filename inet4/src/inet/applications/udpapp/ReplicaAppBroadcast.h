@@ -103,7 +103,7 @@ class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::I
 
 
     //for debugging
-    std::vector<int> order[10];
+    std::vector<int> order;
 
 
     std::map<int, std::set<int>> transactions; //(transactionId, set(replicasThatVoted) )
@@ -111,6 +111,8 @@ class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::I
 
     std::map<int, bool> decided;
 
+    simtime_t maxTime = 0;
+    simtime_t minTime = 10;
 
     int thisId;
 
