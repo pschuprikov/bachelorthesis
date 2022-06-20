@@ -52,6 +52,8 @@ void ReplicaApp::initialize(int stage)
         stopTime = par("stopTime");
         messageLengthPar = &par("messageLength");
 
+        successProbability = par("totalSuccessProbability");
+
         if (stopTime >= SIMTIME_ZERO && stopTime < startTime)
             throw cRuntimeError("Invalid startTime/stopTime parameters");
         selfMsg = new cMessage("ReplicaAppTimer");
@@ -171,7 +173,7 @@ Packet *ReplicaApp::createCommitResponsePacket(int transactionId,  msgType type)
 
     if (type == VOTE) {
         int simultaneousTransactions = currentlyProcessing > 0 ? currentlyProcessing : 1;
-        bool vote = cComponent::uniform(0, 1) >= pow(0.09 * simultaneousTransactions,2)+0.05; //randomly decide whether transaction can be prepared
+        bool vote = cComponent::uniform(0, 1) <= pow(successProbability, 1.0/destAddresses.size()); //randomly decide whether transaction can be prepared
 
         sprintf(msgName, "Vote-T%d [%d]", transactionId, vote);
         pk = new Packet(msgName);

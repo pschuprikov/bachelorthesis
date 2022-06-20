@@ -58,6 +58,8 @@ void ReplicaAppBroadcast::initialize(int stage)
 
         thisId = par("thisId");
 
+        successProbability = par("totalSuccessProbability");
+
         inbox = DelayedQueue(par("receiveDelay"));
 
         if (stopTime >= SIMTIME_ZERO && stopTime < startTime)
@@ -145,12 +147,6 @@ void ReplicaAppBroadcast::processStart()
     socket.bind(localPort);
     setSocketOptions();
 
-    bool joinLocalMulticastGroups = par("joinLocalMulticastGroups");
-    if (joinLocalMulticastGroups) {
-        MulticastGroupList mgl = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this)->collectMulticastGroups();
-        socket.joinLocalMulticastGroups(mgl);
-    }
-
     const char *destAddrs = par("destAddresses");
     cStringTokenizer tokenizer(destAddrs);
     const char *token;
@@ -164,7 +160,17 @@ void ReplicaAppBroadcast::processStart()
         }
     }
 
-    destAddr = destAddresses[0];
+
+    bool joinLocalMulticastGroups = par("joinLocalMulticastGroups");
+    if (joinLocalMulticastGroups) {
+        MulticastGroupList mgl = getModuleFromPar<IInterfaceTable>(par("interfaceTableModule"), this)->collectMulticastGroups();
+        socket.joinLocalMulticastGroups(mgl);
+        const char *multicastAddress= par("multicastAddress");
+        cStringTokenizer tokenizerMulticast(multicastAddress);
+        destAddr = L3AddressResolver().resolve(tokenizerMulticast.nextToken());
+    }
+
+
 
 
     if (stopTime >= SIMTIME_ZERO) {
@@ -212,26 +218,30 @@ void ReplicaAppBroadcast::broadcastAll(int transactionId) {
 
     int simultaneousTransactions = currentlyProcessing > 0 ? currentlyProcessing : 1;
 
-    bool vote = cComponent::uniform(0, 1) >= pow(0.09 * simultaneousTransactions,2)+0.05; //randomly decide whether transaction can be prepared
+    bool vote = cComponent::uniform(0, 1) <= pow(successProbability, 1.0/destAddresses.size()); //randomly decide whether transaction can be prepared
 
     if(!vote){
         decided[transactionId] = true;
         currentlyProcessing--;
         respondClient(transactionId, vote);
+    } else {
+        transactions[transactionId].insert(thisId);
     }
 
-    for (auto addr : destAddresses) {
+    char addressStr[15];
+    strcpy(addressStr, clientAddress[transactionId].str().c_str());
 
-        char addressStr[15];
-        strcpy(addressStr, clientAddress[transactionId].str().c_str());
-
-        Packet * toSend = createVotePacket(transactionId, vote, addressStr);
-        socket.sendTo(toSend, addr, destPort);
-    }
+//    for (auto addr : destAddresses) {
+//
+//
+//
+//        Packet * toSend = createVotePacket(transactionId, vote, addressStr);
+//        socket.sendTo(toSend, addr, destPort);
+//    }
 
     //for when multicast works
-//    Packet * toSend = createVotePacket(transactionId, vote);
-//    socket.sendTo(toSend, destAddr, destPort);
+    Packet * toSend = createVotePacket(transactionId, vote, addressStr);
+    socket.sendTo(toSend, destAddr, destPort);
 }
 
 void ReplicaAppBroadcast::respondClient(int transactionId, bool vote) {
@@ -341,7 +351,7 @@ void ReplicaAppBroadcast::processVote(Packet * pk) {
     bool vote = pk->par("Value").boolValue();
 
     if (decided[transactionId]!=true) {
-        if (vote && transactions[transactionId].size() < destAddresses.size()-1) { //vote yes and not all votes
+        if (vote && transactions[transactionId].size() < destAddresses.size()) { //voted yes and not all votes
             decided[transactionId] = false;
         } else {
 

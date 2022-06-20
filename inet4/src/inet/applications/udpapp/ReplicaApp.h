@@ -45,7 +45,7 @@ class INET_API ReplicaApp : public ApplicationBase, public UdpSocket::ICallback
     int numReceived, numSent = 0;
     int currentlyProcessing = 0;
 
-
+    double  successProbability;
 
     cPar *messageLengthPar = nullptr;
 

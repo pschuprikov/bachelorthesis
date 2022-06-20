@@ -102,8 +102,7 @@ class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::I
     DelayedQueue inbox = DelayedQueue(0);
 
 
-    //for debugging
-    std::vector<int> order;
+    double  successProbability;
 
 
     std::map<int, std::set<int>> transactions; //(transactionId, set(replicasThatVoted) )
@@ -111,6 +110,9 @@ class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::I
 
     std::map<int, bool> decided;
 
+
+    //for debugging
+    std::vector<int> order;
     simtime_t maxTime = 0;
     simtime_t minTime = 10;
 

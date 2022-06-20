@@ -33,9 +33,11 @@ simple ReplicaAppBroadcast like IApp
         int destPort;
         int thisId;
         double receiveDelay @unit(s) = default(0s);// time to wait between receiving and opening messages
+        double totalSuccessProbability;
         bool receiveBroadcast = default(false); // if true, makes the socket receive broadcast packets
         
         string destAddresses;
+        string multicastAddress;
         
         volatile int messageLength @unit(B);
 

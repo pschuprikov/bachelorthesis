@@ -32,6 +32,7 @@ simple ReplicaApp like IApp
         int localPort;
         int destPort;
         bool receiveBroadcast = default(false); // if true, makes the socket receive broadcast packets
+        double totalSuccessProbability;
         
         string destAddresses;
         
