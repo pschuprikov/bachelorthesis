@@ -116,7 +116,7 @@ network KFatTreeNew
 		    clients = clients;
 		}
         configurator: Ipv4NetworkConfigurator;
-
+        controller: TestController;
     connections:
         
         for i=0..sizeof(pod)-1, for j=0..sizeof(coreSwitch)-1 {
@@ -126,5 +126,4 @@ network KFatTreeNew
         for i=0..sizeof(pod)-1, for j=0..int((k/2)^2)-1 {
             hosts.hosts++ <--> pod[i].hosts++;
         }
-
 }
