@@ -37,6 +37,9 @@ ReplicaAppBroadcast::~ReplicaAppBroadcast()
     cancelAndDelete(selfMsg);
 }
 
+std::map<int, simtime_t> ReplicaAppBroadcast::startTimes;
+std::map<int, bool> ReplicaAppBroadcast::collectedThroughput;
+
 void ReplicaAppBroadcast::initialize(int stage)
 {
     ApplicationBase::initialize(stage);
@@ -290,6 +293,10 @@ void ReplicaAppBroadcast::processPacket(Packet *pk)
             currentlyProcessing++;
             clientAddress[transactionId] = pk->getTag<L3AddressInd>()->getSrcAddress();
 
+            if (collectedThroughput.count(transactionId) == 0 && startTimes.count(transactionId) == 0){
+                startTimes[transactionId] = simTime();
+            }
+
             //decide vote first then broadcast (first send to client)
             broadcastAll(pk->par("TransactionId").longValue());
             break;
@@ -361,6 +368,16 @@ void ReplicaAppBroadcast::processVote(Packet * pk) {
 //                EV_INFO << rep << endl;
 //            }
 //            order.clear();
+
+            if (collectedThroughput.count(transactionId) == 0) {
+                collectedThroughput[transactionId] = true;
+                if (vote) {
+                    emit(registerSignal("successfulThroughput"), (simTime() - startTimes[transactionId]));
+                } else {
+                    emit(registerSignal("unsuccessfulThroughput"), (simTime() - startTimes[transactionId]));
+                }
+                startTimes.erase(transactionId);
+            }
 
             decided[transactionId] = true;
             currentlyProcessing--;

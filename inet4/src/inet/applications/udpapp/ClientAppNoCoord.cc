@@ -255,33 +255,6 @@ void ClientAppNoCoord::refreshDisplay() const
 
 void ClientAppNoCoord::processPacket(Packet *pk)
 {
-//    if (pk->par("Type").longValue() == VOTE){
-//        EV_DEBUG << "Received vote" << endl;
-//
-//
-//        EV_DEBUG << "Received vote" << endl;
-//        int transactionId = pk->par("TransactionId").longValue();
-//        int replicaId = pk->par("replicaId").longValue();
-//        transactions[transactionId].insert(replicaId);
-//
-//        if (decided[transactionId]!=true) {
-//
-//            if (pk->par("Value").boolValue() && //vote yes
-//                    transactions[transactionId].size() < destAddresses.size()) { //not all votes
-//                decided[transactionId] = false;
-//            } else {
-//                decided[transactionId] = true;
-//                simtime_t returnTime = simTime() - lastSent;
-//                EV_DEBUG << "Time till response: " << returnTime << endl;
-//                maxReturnTime = maxReturnTime > returnTime ? maxReturnTime : returnTime;
-//                EV_DEBUG << "Max time till response: " << maxReturnTime << endl;
-//                //schedule next sending
-//                scheduleAt(simTime()+ *sendIntervalPar, timerNext);
-//            }
-//        }
-//    }
-
-
     if (pk->getKind() == UDP_I_ERROR) {
         EV_WARN << "UDP error received\n";
         delete pk;
@@ -326,14 +299,11 @@ void ClientAppNoCoord::processPacket(Packet *pk)
 
         EV_INFO << "RECEIVED RESPONSE " << responsesReceived[transactionId] << endl;
 
-        if (responsesReceived[transactionId] == 1){
-            emit(registerSignal("transactionLatency"), (simTime() - lastSent));
-
+        if (responsesReceived[transactionId] == 1) {
             if (pk->par("Value").boolValue()) {
-                emit(registerSignal("successfulCommit"), ++successfulCommit);
+                emit(registerSignal("successfulTransactionLatency"), (simTime() - lastSent));
             } else {
-                emit(registerSignal("successfulCommit"), successfulCommit);
-                //sendQuery(pk->par("TransactionId").longValue()); //retry transaction
+                emit(registerSignal("unsuccessfulTransactionLatency"), (simTime() - lastSent));
             }
             scheduleAt(simTime()+ *sendIntervalPar, timerNext);
         }

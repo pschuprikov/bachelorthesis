@@ -62,8 +62,6 @@ void ClientApp::initialize(int stage)
         numDeleted = 0;
         numDuplicated = 0;
 
-        successfulCommit = 0;
-
         transactionID = 0;
 
         delayLimit = par("delayLimit");
@@ -281,12 +279,10 @@ void ClientApp::processPacket(Packet *pk)
     }
 
     if (pk->par("Type").longValue() == RESPONSE){
-        emit(registerSignal("transactionLatency"), (simTime() - lastSent));
         if (pk->par("Value").boolValue()) {
-            emit(registerSignal("successfulCommit"), ++successfulCommit);
+            emit(registerSignal("successfulTransactionLatency"), (simTime() - lastSent));
         } else {
-            emit(registerSignal("successfulCommit"), successfulCommit);
-            //sendQuery(pk->par("TransactionId").longValue());
+            emit(registerSignal("unsuccessfulTransactionLatency"), (simTime() - lastSent));
         }
         //schedule next sending
         scheduleAt(simTime()+ *sendIntervalPar, timerNext);

@@ -43,11 +43,17 @@ simple CoordApp like IApp
         double stopOperationExtraTime @unit(s) = default(-1s);    // extra time after lifecycle stop operation finished
         double stopOperationTimeout @unit(s) = default(2s);    // timeout value for lifecycle stop operation
         @signal[packetReceived](type=inet::Packet);
+        
+        @signal[successfulThroughput](type=long);
+        @signal[unsuccessfulThroughput](type=long);
+        
         @statistic[packetReceived](title="packets received"; source=packetReceived; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);
         @statistic[throughput](title="throughput"; unit=bps; source="throughput(packetReceived)"; record=vector);
         @statistic[endToEndDelay](title="end-to-end delay"; source="dataAge(packetReceived)"; unit=s; record=histogram,vector; interpolationmode=none);
         @statistic[rcvdPkSeqNo](title="received packet sequence number"; source="appPkSeqNo(packetReceived)"; record=vector; interpolationmode=none);
-
+        
+        @statistic[successfulThroughput](title="transaction thoughput [successful]"; source=successfulThroughput; record=count, vector, stats; interpolationmode=none);
+		@statistic[unsuccessfulThroughput](title="transaction thoughput [unsuccessful]"; source=unsuccessfulThroughput; record=count, vector, stats; interpolationmode=none);
     gates:
         input socketIn @labels(UdpControlInfo/up);
         output socketOut @labels(UdpControlInfo/down);

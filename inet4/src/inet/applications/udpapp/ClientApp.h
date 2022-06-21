@@ -82,7 +82,6 @@ class INET_API ClientApp : public ApplicationBase, public UdpSocket::ICallback
     int numReceived = 0;
     int numDeleted = 0;
     int numDuplicated = 0;
-    int successfulCommit = 0;
 
     static int transactionID;
 

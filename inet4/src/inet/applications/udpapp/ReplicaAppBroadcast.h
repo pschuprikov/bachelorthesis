@@ -110,6 +110,8 @@ class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::I
 
     std::map<int, bool> decided;
 
+    static std::map<int, simtime_t> startTimes;
+    static std::map<int, bool> collectedThroughput;
 
     //for debugging
     std::vector<int> order;
