@@ -1,0 +1,3 @@
+[submodule "traffic-engineering"]
+	path = traffic-engineering
+	url = git@github.com:pschuprikov/traffic-engineering.git

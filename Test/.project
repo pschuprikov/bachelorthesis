@@ -3,7 +3,8 @@
 	<name>Test</name>
 	<comment></comment>
 	<projects>
-		<project>inet4</project>
+		<project>inet</project>
+		<project>trafficengineering</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

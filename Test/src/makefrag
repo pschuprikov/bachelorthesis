@@ -13,3 +13,16 @@ ifeq ($(PLATFORM),win32.x86_64)
   LDFLAGS := $(filter-out $(ENABLE_AUTO_IMPORT), $(LDFLAGS))
 
 endif
+
+.DEFAULT_GOAL := all
+
+run-2pc: $(TARGET_FILES)
+	opp_run -n $(INET_PROJ)/src:. -l $(INET_PROJ)/src/INET$(D) -l ./$(TARGET) 2PC.ini
+
+run-nbac: $(TARGET_FILES)
+	opp_run -n $(INET_PROJ)/src:. -l $(INET_PROJ)/src/INET$(D) -l ./$(TARGET) NBAC.ini
+
+run-nbac-cmd: $(TARGET_FILES)
+	opp_run -u Cmdenv --cmdenv-express-mode=false -n $(INET_PROJ)/src:. -l $(INET_PROJ)/src/INET$(D) -l ./$(TARGET) NBAC.ini
+
+.PHONY: run
