@@ -13,8 +13,6 @@
 // along with this program.  If not, see http://www.gnu.org/licenses/.
 // 
 
-// Created: 2022-3-15 for project Test
-
 package test2;
 
 import ned.DatarateChannel;
@@ -22,52 +20,19 @@ import inet.node.inet.Router;
 import inet.node.inet.StandardHost;
 import inet.networklayer.configurator.ipv4.Ipv4NetworkConfigurator;
 
+
 import ned.DatarateChannel;
-channel HostToSwitch extends DatarateChannel
-{
-    datarate = 10Gbps;
-}
 
-channel SwitchToSwitch extends DatarateChannel
-{
-    datarate = 100Gbps;
-}
 
-module Pod2
-{
-    parameters:
-        int k;
-    gates:
-        inout port[int((k/2)^2)];
-        inout hosts[int((k/2)^2)];
-    submodules:
-        aggregateSwitch[int(k/2)]: Router {
-            multicastForwarding = true;
-        }
-        edgeSwitch[int(k/2)]: Router {
-            multicastForwarding = true;
-        }
-    connections:
-        for i=0..sizeof(aggregateSwitch)-1, for j=0..int(k/2) - 1 {
-            aggregateSwitch[i].ethg++ <--> port[i*int(k/2)+j];
-        }
 
-        for i=0..sizeof(hosts)-1 {
-            hosts[i] <--> edgeSwitch[int(i%(k/2))].ethg++;
 
-        }
-
-        for i=0..sizeof(edgeSwitch)-1, for j=0..sizeof(aggregateSwitch)-1 {
-            edgeSwitch[i].ethg++ <--> SwitchToSwitch <--> aggregateSwitch[j].ethg++;
-        }
-
-}
-
-module Hosts
+module NewHosts
 {
     parameters: 
-        int k;
+        int replicas;
         int clients;
+        bool coord;
+        
     gates:
         inout hosts[int((k^3)/4)];
        
@@ -78,9 +43,9 @@ module Hosts
             multicastForwarding = true;
         }
         
-        coordinator: StandardHost;
+        coordinator[coord]: StandardHost;
 
-        replica[int(((k^3)/4)-2)]: StandardHost;
+        replica[replicas]: StandardHost;
     connections:
         clientSwitch.ethg++ <--> SwitchToSwitch <--> hosts[0];
         
@@ -88,21 +53,23 @@ module Hosts
             clientSwitch.ethg++ <--> HostToSwitch <--> client[i].ethg++;
         }
         
-        for i=0..sizeof(replica)-1 {
-            replica[i].ethg++ <--> HostToSwitch <--> hosts[i+1];
-        }
+//        coordinator.ethg++ <--> HostToSwitch  <--> hosts[1];
         
-        coordinator.ethg++ <--> HostToSwitch  <--> hosts[int((k^3)/4) - 1];
+        for i=0..sizeof(replica)-1 {
+            replica[i].ethg++ <--> HostToSwitch <--> hosts[i+2];
+        }
             
     
 }
 
 
-network KFatTreeNew
+
+network NewTopology
 {
-    parameters:
-        int k;
+     parameters:
+        int replicas;
         int clients;
+        bool coord;
 
     submodules:
         coreSwitch[int((k/2)^2)]: Router {
@@ -111,12 +78,13 @@ network KFatTreeNew
         pod[k]: Pod2 {
             k = k;
         }
-		hosts: Hosts {
-		    k = k;
+		hosts: NewHosts {
+		    replicas = replicas;
 		    clients = clients;
+		    coord = coord;
 		}
         configurator: Ipv4NetworkConfigurator;
-        controller: TestController;
+
     connections:
         
         for i=0..sizeof(pod)-1, for j=0..sizeof(coreSwitch)-1 {

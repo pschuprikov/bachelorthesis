@@ -72,7 +72,6 @@ void ClientAppNoCoord::initialize(int stage)
         if (stopTime >= SIMTIME_ZERO && stopTime <= startTime)
             throw cRuntimeError("Invalid startTime/stopTime parameters");
 
-        messageLengthPar = &par("messageLength");
         sendIntervalPar = &par("sendInterval");
         nextSleep = startTime;
         nextBurst = startTime;
@@ -99,8 +98,7 @@ Packet *ClientAppNoCoord::createPreparePacket(int transId)
     Packet *pk = new Packet(msgName);
 
     const auto& payload = makeShared<ApplicationPacket>();
-    long msgByteLength = *messageLengthPar;
-    payload->setChunkLength(B(msgByteLength));
+    payload->setChunkLength(B(3234/8.0));
     payload->setSequenceNumber(numSent);
     payload->addTag<CreationTimeTag>()->setCreationTime(simTime());
 
@@ -175,15 +173,15 @@ void ClientAppNoCoord::processSend()
 }
 
 void ClientAppNoCoord::broadcastAll(int transactionId) {
-    for (int i = 0; i < 1; ++i) {
-        Packet * toSend = createPreparePacket(transactionId);
-        socket.sendTo(toSend, destAddresses[i], destPort);
-    }
-
-//    for (auto addr : destAddresses) {
+//    for (int i = 0; i < 1; ++i) {
 //        Packet * toSend = createPreparePacket(transactionId);
-//        socket.sendTo(toSend, addr, destPort);
+//        socket.sendTo(toSend, destAddresses[i], destPort);
 //    }
+
+    for (auto addr : destAddresses) {
+        Packet * toSend = createPreparePacket(transactionId);
+        socket.sendTo(toSend, addr, destPort);
+    }
 }
 
 void ClientAppNoCoord::sendQuery(int transId)

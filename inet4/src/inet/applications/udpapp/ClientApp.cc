@@ -70,7 +70,6 @@ void ClientApp::initialize(int stage)
         if (stopTime >= SIMTIME_ZERO && stopTime <= startTime)
             throw cRuntimeError("Invalid startTime/stopTime parameters");
 
-        messageLengthPar = &par("messageLength");
         sendIntervalPar = &par("sendInterval");
         nextSleep = startTime;
         nextBurst = startTime;
@@ -97,8 +96,8 @@ Packet *ClientApp::createRequestPacket(int transId)
     Packet *pk = new Packet(msgName);
 
     const auto& payload = makeShared<ApplicationPacket>();
-    long msgByteLength = *messageLengthPar;
-    payload->setChunkLength(B(msgByteLength));
+    long msgLength = 3236;
+    payload->setChunkLength(B(msgLength/8.0));
     payload->setSequenceNumber(numSent);
     payload->addTag<CreationTimeTag>()->setCreationTime(simTime());
 

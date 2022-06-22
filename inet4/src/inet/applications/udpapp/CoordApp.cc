@@ -47,7 +47,6 @@ void CoordApp::initialize(int stage)
 
         startTime = par("startTime");
         stopTime = par("stopTime");
-        messageLengthPar = &par("messageLength");
 
 
         if (stopTime >= SIMTIME_ZERO && stopTime < startTime)
@@ -164,8 +163,8 @@ Packet *CoordApp::createPacket(int transactionId, msgType type, bool value)
     Packet *pk = new Packet(msgName);
 
     const auto& payload = makeShared<ApplicationPacket>();
-    long msgByteLength = *messageLengthPar;
-    payload->setChunkLength(B(msgByteLength));
+    long msgLength = type == PREPARE ? 3236 : 36;
+    payload->setChunkLength(B(msgLength/8.0));
     payload->setSequenceNumber(numSent);
     payload->addTag<CreationTimeTag>()->setCreationTime(simTime()); //difference between tag and addPar? not sure where to add transaction details
 

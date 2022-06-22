@@ -111,7 +111,6 @@ simple ClientAppNoCoord like IApp
         int destPort; // remote UDP port number
         double startTime @unit(s) = default(1s); // application start time (start of the first burst)
         double stopTime @unit(s) = default(-1s); // application stop time (no packets are sent after this time); a negative or -1 means no limit
-        volatile int messageLength @unit(B); // length of messages to generate, in bytes
         volatile double sendInterval @unit(s); // time between messages during bursts; usually a random value, e.g. 0.1s+uniform(-0.001s,0.001s); zero not allowed
         double delayLimit @unit(s) = default(0s); // maximum accepted delay for a packet; packets with a bigger delay are discarded (dropped), zero value means no limit
         int timeToLive = default(-1); // if not -1, set the TTL (IPv4) or Hop Limit (IPv6) field of sent packets to this value

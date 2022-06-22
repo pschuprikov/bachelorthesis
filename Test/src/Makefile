@@ -1,26 +1,32 @@
 #
-# OMNeT++/OMNEST Makefile for $(LIB_PREFIX)Test
+# OMNeT++/OMNEST Makefile for Test
 #
 # This file was generated with the command:
-#  opp_makemake --make-so -f --deep -KINET_PROJ=../../inet4 -KTRAFFICENGINEERING_PROJ=../../traffic-engineering -DINET_IMPORT -I$$\(INET_PROJ\)/src -I$$\(TRAFFICENGINEERING_PROJ\)/include -L$$\(INET_PROJ\)/src -L$$\(TRAFFICENGINEERING_PROJ\)/src -lINET$$\(D\) -ltrafficengineering$$\(D\)
+#  opp_makemake -f --deep -KINET4_PROJ=../../inet4 -KTRAFFIC_ENGINEERING_PROJ=../../traffic-engineering -DINET_IMPORT -I$$\(TRAFFIC_ENGINEERING_PROJ\) -I$$\(TRAFFIC_ENGINEERING_PROJ\)/include -I$$\(INET4_PROJ\)/src -L$$\(INET4_PROJ\)/src -L$$\(TRAFFIC_ENGINEERING_PROJ\) -lINET$$\(D\) -ltraffic-engineering$$\(D\)
 #
 
 # Name of target to be created (-o option)
 TARGET_DIR = .
-TARGET_NAME = $(LIB_PREFIX)Test$(D)
-TARGET = $(TARGET_NAME)$(SHARED_LIB_SUFFIX)
+TARGET_NAME = Test$(D)
+TARGET = $(TARGET_NAME)$(EXE_SUFFIX)
 TARGET_IMPLIB = $(TARGET_NAME)$(IMPLIB_SUFFIX)
 TARGET_IMPDEF = $(TARGET_NAME)$(IMPDEF_SUFFIX)
 TARGET_FILES = $(TARGET_DIR)/$(TARGET)
 
+# User interface (uncomment one) (-u option)
+USERIF_LIBS = $(ALL_ENV_LIBS) # that is, $(TKENV_LIBS) $(QTENV_LIBS) $(CMDENV_LIBS)
+#USERIF_LIBS = $(CMDENV_LIBS)
+#USERIF_LIBS = $(TKENV_LIBS)
+#USERIF_LIBS = $(QTENV_LIBS)
+
 # C++ include paths (with -I)
-INCLUDE_PATH = -I$(INET_PROJ)/src -I$(TRAFFICENGINEERING_PROJ)/include
+INCLUDE_PATH = -I$(TRAFFIC_ENGINEERING_PROJ) -I$(TRAFFIC_ENGINEERING_PROJ)/include -I$(INET4_PROJ)/src
 
 # Additional object and library files to link with
 EXTRA_OBJS =
 
 # Additional libraries (-L, -l options)
-LIBS = $(LDFLAG_LIBPATH)$(INET_PROJ)/src $(LDFLAG_LIBPATH)$(TRAFFICENGINEERING_PROJ)/src  -lINET$(D) -ltrafficengineering$(D)
+LIBS = $(LDFLAG_LIBPATH)$(INET4_PROJ)/src $(LDFLAG_LIBPATH)$(TRAFFIC_ENGINEERING_PROJ)  -lINET$(D) -ltraffic-engineering$(D)
 
 # Output directory
 PROJECT_OUTPUT_DIR = ../out
@@ -37,8 +43,8 @@ MSGFILES =
 SMFILES =
 
 # Other makefile variables (-K)
-INET_PROJ=../../inet4
-TRAFFICENGINEERING_PROJ=../../traffic-engineering
+INET4_PROJ=../../inet4
+TRAFFIC_ENGINEERING_PROJ=../../traffic-engineering
 
 #------------------------------------------------------------------------------
 
@@ -57,9 +63,9 @@ endif
 include $(CONFIGFILE)
 
 # Simulation kernel and user interface libraries
-OMNETPP_LIBS = -loppenvir$D $(KERNEL_LIBS) $(SYS_LIBS)
+OMNETPP_LIBS = $(OPPMAIN_LIB) $(USERIF_LIBS) $(KERNEL_LIBS) $(SYS_LIBS)
 ifneq ($(PLATFORM),win32.x86_64)
-LIBS += -Wl,-rpath,$(abspath $(INET_PROJ)/src) -Wl,-rpath,$(abspath $(TRAFFICENGINEERING_PROJ)/src)
+LIBS += -Wl,-rpath,$(abspath $(INET4_PROJ)/src) -Wl,-rpath,$(abspath $(TRAFFIC_ENGINEERING_PROJ))
 endif
 
 COPTS = $(CFLAGS) $(IMPORT_DEFINES) -DINET_IMPORT $(INCLUDE_PATH) -I$(OMNETPP_INCL_DIR)
@@ -73,17 +79,6 @@ COPTS_FILE = $O/.last-copts
 ifneq ("$(COPTS)","$(shell cat $(COPTS_FILE) 2>/dev/null || echo '')")
   $(shell $(MKPATH) "$O")
   $(file >$(COPTS_FILE),$(COPTS))
-endif
-
-# On Windows, the target has additional file(s). An import lib and an optional debug symbol file is created too.
-ifeq ($(PLATFORM),win32.x86_64)
-  TARGET_FILES+= $(TARGET_DIR)/$(TARGET_IMPDEF) $(TARGET_DIR)/$(TARGET_IMPLIB)
-  LDFLAGS+=$(LDFLAG_IMPDEF)$O/$(TARGET_IMPDEF) $(LDFLAG_IMPLIB)$O/$(TARGET_IMPLIB)
-  ifeq ($(TOOLCHAIN_NAME),clang-msabi)
-    ifeq ($(MODE),debug)
-      TARGET_FILES+=$(TARGET_DIR)/$(TARGET_NAME).pdb
-    endif
-  endif
 endif
 
 #------------------------------------------------------------------------------
@@ -102,14 +97,10 @@ ifeq ($(TOOLCHAIN_NAME),clang-msabi)
 	-$(Q)-$(LN) $(<:%.dll=%.lib) $(@:%.dll=%.lib) 2>/dev/null
 endif
 
-$O/$(TARGET) $O/$(TARGET_IMPDEF) $O/$(TARGET_IMPLIB) &: $(OBJS)  $(wildcard $(EXTRA_OBJS)) Makefile $(CONFIGFILE)
+$O/$(TARGET): $(OBJS)  $(wildcard $(EXTRA_OBJS)) Makefile $(CONFIGFILE)
 	@$(MKPATH) $O
-	@echo Creating shared library: $@
-	$(Q)$(SHLIB_LD) -o $O/$(TARGET) $(OBJS) $(EXTRA_OBJS) $(AS_NEEDED_OFF) $(WHOLE_ARCHIVE_ON) $(LIBS) $(WHOLE_ARCHIVE_OFF) $(OMNETPP_LIBS) $(LDFLAGS)
-	$(Q)$(SHLIB_POSTPROCESS) $O/$(TARGET)
-ifeq ($(PLATFORM),win32.x86_64)
-	$(Q)llvm-ar d $O/$(TARGET_IMPLIB) $(TARGET) # WORKAROUND: throw away the first file from the archive to make the LLD generated import lib valid
-endif
+	@echo Creating executable: $@
+	$(Q)$(CXX) $(LDFLAGS) -o $O/$(TARGET) $(OBJS) $(EXTRA_OBJS) $(AS_NEEDED_OFF) $(WHOLE_ARCHIVE_ON) $(LIBS) $(WHOLE_ARCHIVE_OFF) $(OMNETPP_LIBS)
 
 .PHONY: all clean cleanall depend msgheaders smheaders
 

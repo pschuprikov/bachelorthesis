@@ -47,6 +47,8 @@ class INET_API ReplicaApp : public ApplicationBase, public UdpSocket::ICallback
 
     double  successProbability;
 
+    int numReplicas;
+
     cPar *messageLengthPar = nullptr;
 
   public:

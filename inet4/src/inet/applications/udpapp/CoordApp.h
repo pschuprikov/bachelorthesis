@@ -48,9 +48,6 @@ class INET_API CoordApp : public ApplicationBase, public UdpSocket::ICallback
 
     std::map<int, simtime_t> startTimes;
 
-
-    cPar *messageLengthPar = nullptr;
-
   public:
     CoordApp() {}
     virtual ~CoordApp();

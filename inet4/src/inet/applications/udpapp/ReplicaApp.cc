@@ -50,7 +50,8 @@ void ReplicaApp::initialize(int stage)
 
         startTime = par("startTime");
         stopTime = par("stopTime");
-        messageLengthPar = &par("messageLength");
+
+        numReplicas = par("numReplicas");
 
         successProbability = par("totalSuccessProbability");
 
@@ -173,7 +174,7 @@ Packet *ReplicaApp::createCommitResponsePacket(int transactionId,  msgType type)
 
     if (type == VOTE) {
         int simultaneousTransactions = currentlyProcessing > 0 ? currentlyProcessing : 1;
-        bool vote = cComponent::uniform(0, 1) <= pow(successProbability, 1.0/destAddresses.size()); //randomly decide whether transaction can be prepared
+        bool vote = cComponent::uniform(0, 1) <= pow(successProbability, 1.0/numReplicas); //randomly decide whether transaction can be prepared
 
         sprintf(msgName, "Vote-T%d [%d]", transactionId, vote);
         pk = new Packet(msgName);
@@ -187,8 +188,8 @@ Packet *ReplicaApp::createCommitResponsePacket(int transactionId,  msgType type)
     pk->setName(msgName);
 
     const auto& payload = makeShared<ApplicationPacket>();
-    long msgByteLength = *messageLengthPar;
-    payload->setChunkLength(B(msgByteLength));
+    long msgLength = type == VOTE ? 36 : 35;
+    payload->setChunkLength(B(msgLength/8.0));
     payload->setSequenceNumber(numSent);
     payload->addTag<CreationTimeTag>()->setCreationTime(simTime());
 

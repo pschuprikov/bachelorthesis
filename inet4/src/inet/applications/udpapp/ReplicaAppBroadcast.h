@@ -84,8 +84,6 @@ class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::I
     };
 
 
-
-
     enum msgType {PREPARE, VOTE, RESPONSE};
 
     UdpSocket socket;
@@ -101,6 +99,7 @@ class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::I
     //Packet * sorted by timestamp
     DelayedQueue inbox = DelayedQueue(0);
 
+    int numReplicas;
 
     double  successProbability;
 
@@ -119,8 +118,6 @@ class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::I
     simtime_t minTime = 10;
 
     int thisId;
-
-    cPar *messageLengthPar = nullptr;
 
   public:
     ReplicaAppBroadcast() {}

@@ -34,9 +34,10 @@ simple ReplicaApp like IApp
         bool receiveBroadcast = default(false); // if true, makes the socket receive broadcast packets
         double totalSuccessProbability;
         
+        int numReplicas;
         string destAddresses;
+        string multicastAddress;
         
-        volatile int messageLength @unit(B);
 
         @display("i=block/sink");
         @lifecycleSupport;

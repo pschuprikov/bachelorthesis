@@ -57,9 +57,9 @@ void ReplicaAppBroadcast::initialize(int stage)
 
         startTime = par("startTime");
         stopTime = par("stopTime");
-        messageLengthPar = &par("messageLength");
 
         thisId = par("thisId");
+        numReplicas = par("numReplicas");
 
         successProbability = par("totalSuccessProbability");
 
@@ -196,8 +196,7 @@ Packet *ReplicaAppBroadcast::createVotePacket(int transactionId, bool vote, char
     Packet *pk = new Packet(msgName);
 
     const auto& payload = makeShared<ApplicationPacket>();
-    long msgByteLength = *messageLengthPar;
-    payload->setChunkLength(B(msgByteLength));
+    payload->setChunkLength(B(3331/8.0));
     payload->setSequenceNumber(numSent);
     payload->addTag<CreationTimeTag>()->setCreationTime(simTime()); //difference between tag and addPar? not sure where to add transaction details
 
@@ -221,7 +220,7 @@ void ReplicaAppBroadcast::broadcastAll(int transactionId) {
 
     int simultaneousTransactions = currentlyProcessing > 0 ? currentlyProcessing : 1;
 
-    bool vote = cComponent::uniform(0, 1) <= pow(successProbability, 1.0/destAddresses.size()); //randomly decide whether transaction can be prepared
+    bool vote = cComponent::uniform(0, 1) <= pow(successProbability, 1.0/numReplicas); //randomly decide whether transaction can be prepared
 
     if(!vote){
         decided[transactionId] = true;
@@ -256,8 +255,7 @@ void ReplicaAppBroadcast::respondClient(int transactionId, bool vote) {
     Packet *pk = new Packet(msgName);
 
     const auto& payload = makeShared<ApplicationPacket>();
-    long msgByteLength = *messageLengthPar;
-    payload->setChunkLength(B(msgByteLength));
+    payload->setChunkLength(B(35/8.0));
     payload->setSequenceNumber(numSent);
     payload->addTag<CreationTimeTag>()->setCreationTime(simTime()); //difference between tag and addPar? not sure where to add transaction details
 
@@ -358,7 +356,7 @@ void ReplicaAppBroadcast::processVote(Packet * pk) {
     bool vote = pk->par("Value").boolValue();
 
     if (decided[transactionId]!=true) {
-        if (vote && transactions[transactionId].size() < destAddresses.size()) { //voted yes and not all votes
+        if (vote && transactions[transactionId].size() < numReplicas) { //voted yes and not all votes
             decided[transactionId] = false;
         } else {
 

@@ -57,7 +57,6 @@ class INET_API ClientApp : public ApplicationBase, public UdpSocket::ICallback
     int localPort = -1, destPort = -1;
 
     // volatile parameters:
-    cPar *messageLengthPar = nullptr;
     cPar *sendIntervalPar = nullptr;
 
     // state

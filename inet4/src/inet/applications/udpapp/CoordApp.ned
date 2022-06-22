@@ -35,8 +35,7 @@ simple CoordApp like IApp
         
         int numReplicas;
         string destAddresses;
-        
-        volatile int messageLength @unit(B);
+        string multicastAddress;
 
         @display("i=block/sink");
         @lifecycleSupport;

@@ -38,8 +38,7 @@ simple ReplicaAppBroadcast like IApp
         
         string destAddresses;
         string multicastAddress;
-        
-        volatile int messageLength @unit(B);
+        int numReplicas;
 
         @display("i=block/sink");
         @lifecycleSupport;
