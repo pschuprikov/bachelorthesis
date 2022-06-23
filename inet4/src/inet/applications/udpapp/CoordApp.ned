@@ -43,8 +43,8 @@ simple CoordApp like IApp
         double stopOperationTimeout @unit(s) = default(2s);    // timeout value for lifecycle stop operation
         @signal[packetReceived](type=inet::Packet);
         
-        @signal[successfulThroughput](type=long);
-        @signal[unsuccessfulThroughput](type=long);
+        @signal[successfulThroughput](type=double);
+        @signal[unsuccessfulThroughput](type=double);
         
         @statistic[packetReceived](title="packets received"; source=packetReceived; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);
         @statistic[throughput](title="throughput"; unit=bps; source="throughput(packetReceived)"; record=vector);

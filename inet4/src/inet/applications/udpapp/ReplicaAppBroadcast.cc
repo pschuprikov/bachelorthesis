@@ -40,6 +40,9 @@ ReplicaAppBroadcast::~ReplicaAppBroadcast()
 std::map<int, simtime_t> ReplicaAppBroadcast::startTimes;
 std::map<int, bool> ReplicaAppBroadcast::collectedThroughput;
 
+
+//simtime_t ReplicaAppBroadcast::maxTime;
+//simtime_t ReplicaAppBroadcast::minTime;
 void ReplicaAppBroadcast::initialize(int stage)
 {
     ApplicationBase::initialize(stage);
@@ -60,6 +63,9 @@ void ReplicaAppBroadcast::initialize(int stage)
 
         thisId = par("thisId");
         numReplicas = par("numReplicas");
+
+//        maxTime = 0;
+//        minTime = 10;
 
         successProbability = par("totalSuccessProbability");
 
@@ -231,7 +237,7 @@ void ReplicaAppBroadcast::broadcastAll(int transactionId) {
     }
 
     char addressStr[15];
-    strcpy(addressStr, clientAddress[transactionId].str().c_str());
+    strcpy(addressStr, clientAddress[transactionId].c_str());
 
 //    for (auto addr : destAddresses) {
 //
@@ -241,9 +247,9 @@ void ReplicaAppBroadcast::broadcastAll(int transactionId) {
 //        socket.sendTo(toSend, addr, destPort);
 //    }
 
-    //for when multicast works
     Packet * toSend = createVotePacket(transactionId, vote, addressStr);
     socket.sendTo(toSend, destAddr, destPort);
+    EV_INFO << "BROADCASTING VOTE " << UdpSocket::getReceivedPacketInfo(toSend) << endl;
 }
 
 void ReplicaAppBroadcast::respondClient(int transactionId, bool vote) {
@@ -267,7 +273,7 @@ void ReplicaAppBroadcast::respondClient(int transactionId, bool vote) {
     pk->addPar("Value") = vote;
     pk->addPar("msgId") = numSent;
 
-    socket.sendTo(pk, clientAddress[transactionId], destPort);
+    socket.sendTo(pk, L3Address(clientAddress[transactionId]), destPort);
 }
 
 
@@ -282,6 +288,8 @@ void ReplicaAppBroadcast::processPacket(Packet *pk)
 
     switch (pk->par("Type").longValue()) {
         case PREPARE: {
+
+
             //if prepare received after receiving transaction from vote (i.e. already have client address)
             if (clientAddress.count(transactionId) != 0) {
                 delete pk;
@@ -289,14 +297,14 @@ void ReplicaAppBroadcast::processPacket(Packet *pk)
             }
 
             currentlyProcessing++;
-            clientAddress[transactionId] = pk->getTag<L3AddressInd>()->getSrcAddress();
+            clientAddress[transactionId] = pk->getTag<L3AddressInd>()->getSrcAddress().str();
 
             if (collectedThroughput.count(transactionId) == 0 && startTimes.count(transactionId) == 0){
                 startTimes[transactionId] = simTime();
             }
 
             //decide vote first then broadcast (first send to client)
-            broadcastAll(pk->par("TransactionId").longValue());
+            broadcastAll(transactionId);
             break;
         }
 
@@ -326,17 +334,20 @@ void ReplicaAppBroadcast::processVote(Packet * pk) {
     int transactionId = pk->par("TransactionId").longValue();
     int replicaId = pk->par("ReplicaId").longValue();
 
-    simtime_t travelTime = pk->getCreationTime();
+    simtime_t travelTime = simTime() - pk->getCreationTime();
 
     EV_INFO << "RECEIVED VOTE: " << UdpSocket::getReceivedPacketInfo(pk) << endl;
-
-    if (travelTime < minTime) {
-        minTime = travelTime;
-        EV_INFO << "in the Min Time: " << minTime << endl;
-    } else if (travelTime > maxTime) {
-        maxTime = travelTime;
-        EV_INFO << "in the Max Time: " << minTime << endl;
-    }
+//    EV_INFO << "RECEIVED " << transactions[transactionId].size()<< " out of "<< numReplicas <<endl;
+//
+//    if (travelTime < minTime) {
+//        minTime = travelTime;
+//        emit(registerSignal("delayToUse"), maxTime.dbl() - minTime.dbl());
+//        EV_INFO << "in the Min Time: " << minTime << endl;
+//    } else if (travelTime > maxTime) {
+//        maxTime = travelTime;
+//        emit(registerSignal("delayToUse"),  maxTime.dbl() - minTime.dbl());
+//        EV_INFO << "in the Max Time: " << minTime << endl;
+//    }
 
     //debugging
 //    order.push_back(replicaId);
@@ -346,7 +357,7 @@ void ReplicaAppBroadcast::processVote(Packet * pk) {
     if (clientAddress.count(transactionId) == 0) {
         currentlyProcessing++;
         //add clientAddress
-        clientAddress[transactionId] = L3Address(pk->par("ClientAddress").stringValue());
+        clientAddress[transactionId] = pk->par("ClientAddress").stringValue();
         //send vote
         broadcastAll(pk->par("TransactionId").longValue());
     }
@@ -370,9 +381,9 @@ void ReplicaAppBroadcast::processVote(Packet * pk) {
             if (collectedThroughput.count(transactionId) == 0) {
                 collectedThroughput[transactionId] = true;
                 if (vote) {
-                    emit(registerSignal("successfulThroughput"), (simTime() - startTimes[transactionId]));
+                    emit(registerSignal("successfulThroughput"), (simTime().dbl() - startTimes[transactionId].dbl()));
                 } else {
-                    emit(registerSignal("unsuccessfulThroughput"), (simTime() - startTimes[transactionId]));
+                    emit(registerSignal("unsuccessfulThroughput"), (simTime().dbl() - startTimes[transactionId].dbl()));
                 }
                 startTimes.erase(transactionId);
             }

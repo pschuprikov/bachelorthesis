@@ -26,11 +26,17 @@ import ned.DatarateChannel;
 channel HostToSwitch extends DatarateChannel
 {
     datarate = 10Gbps;
+    delay = uniform(5us, 1us);
+    //delay = 5 microsecond
+    //jitter 1 microsecond
 }
 
 channel SwitchToSwitch extends DatarateChannel
 {
     datarate = 100Gbps;
+    delay = uniform(1us, 0.1us);
+    //delay = 1 microsecond
+    //jitter 0.1 microsecond
 }
 
 module Pod2

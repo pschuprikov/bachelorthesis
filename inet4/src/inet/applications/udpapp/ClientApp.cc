@@ -279,9 +279,9 @@ void ClientApp::processPacket(Packet *pk)
 
     if (pk->par("Type").longValue() == RESPONSE){
         if (pk->par("Value").boolValue()) {
-            emit(registerSignal("successfulTransactionLatency"), (simTime() - lastSent));
+            emit(registerSignal("successfulTransactionLatency"), (simTime().dbl() - lastSent.dbl()));
         } else {
-            emit(registerSignal("unsuccessfulTransactionLatency"), (simTime() - lastSent));
+            emit(registerSignal("unsuccessfulTransactionLatency"), (simTime().dbl() - lastSent.dbl()));
         }
         //schedule next sending
         scheduleAt(simTime()+ *sendIntervalPar, timerNext);

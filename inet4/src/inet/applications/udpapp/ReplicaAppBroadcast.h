@@ -105,7 +105,7 @@ class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::I
 
 
     std::map<int, std::set<int>> transactions; //(transactionId, set(replicasThatVoted) )
-    std::map<int, L3Address> clientAddress; // (transactionId, addressOfClient )
+    std::map<int, std::string> clientAddress; // (transactionId, addressOfClient )
 
     std::map<int, bool> decided;
 
@@ -113,9 +113,8 @@ class INET_API ReplicaAppBroadcast : public ApplicationBase, public UdpSocket::I
     static std::map<int, bool> collectedThroughput;
 
     //for debugging
-    std::vector<int> order;
-    simtime_t maxTime = 0;
-    simtime_t minTime = 10;
+    static simtime_t maxTime;
+    static simtime_t minTime;
 
     int thisId;
 

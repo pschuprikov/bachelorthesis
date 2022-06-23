@@ -110,7 +110,6 @@ class INET_API ClientAppNoCoord : public ApplicationBase, public UdpSocket::ICal
     virtual void finish() override;
     virtual void refreshDisplay() const override;
 
-    virtual void sendQuery(int transId);
     virtual void broadcastAll(int transactionId);
 
     virtual void processStart();

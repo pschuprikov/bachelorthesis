@@ -128,8 +128,8 @@ simple ClientApp like IApp
         @signal[packetReceived](type=inet::Packet);
         @signal[packetDropped](type=inet::Packet);
         @signal[outOfOrderPk](type=inet::Packet);
-        @signal[successfulTransactionLatency](type=long);
-        @signal[unsuccessfulTransactionLatency](type=long);
+        @signal[successfulTransactionLatency](type=double);
+        @signal[unsuccessfulTransactionLatency](type=double);
         
         @statistic[packetSent](title="packets sent"; source=packetSent; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);
         @statistic[packetReceived](title="packets received"; source=packetReceived; record=count,"sum(packetBytes)","vector(packetBytes)"; interpolationmode=none);

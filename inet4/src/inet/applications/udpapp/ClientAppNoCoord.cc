@@ -167,7 +167,6 @@ void ClientAppNoCoord::processStart()
 void ClientAppNoCoord::processSend()
 {
     if (stopTime < SIMTIME_ZERO || simTime() < stopTime) {
-        //sendQuery(transactionID++);
         broadcastAll(transactionID++);
     }
 }
@@ -182,16 +181,7 @@ void ClientAppNoCoord::broadcastAll(int transactionId) {
         Packet * toSend = createPreparePacket(transactionId);
         socket.sendTo(toSend, addr, destPort);
     }
-}
-
-void ClientAppNoCoord::sendQuery(int transId)
-{
-    Packet * pk = createPreparePacket(transId);
-    pk->setTimestamp();
-    emit(packetSentSignal, pk);
-    socket.sendTo(pk, destAddr, destPort);
     lastSent = simTime();
-    responsesReceived[transId] = 0;
 }
 
 void ClientAppNoCoord::processStop()
@@ -299,9 +289,9 @@ void ClientAppNoCoord::processPacket(Packet *pk)
 
         if (responsesReceived[transactionId] == 1) {
             if (pk->par("Value").boolValue()) {
-                emit(registerSignal("successfulTransactionLatency"), (simTime() - lastSent));
+                emit(registerSignal("successfulTransactionLatency"), (simTime().dbl() - lastSent.dbl()));
             } else {
-                emit(registerSignal("unsuccessfulTransactionLatency"), (simTime() - lastSent));
+                emit(registerSignal("unsuccessfulTransactionLatency"), (simTime().dbl() - lastSent.dbl()));
             }
             scheduleAt(simTime()+ *sendIntervalPar, timerNext);
         }

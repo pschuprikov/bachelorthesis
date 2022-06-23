@@ -36,7 +36,7 @@ simple ReplicaAppBroadcast like IApp
         double totalSuccessProbability;
         bool receiveBroadcast = default(false); // if true, makes the socket receive broadcast packets
         
-        string destAddresses;
+        string destAddresses= default("");
         string multicastAddress;
         int numReplicas;
 
@@ -47,8 +47,9 @@ simple ReplicaAppBroadcast like IApp
         bool joinLocalMulticastGroups = default(false);
         
         
-        @signal[successfulThroughput](type=long);
-        @signal[unsuccessfulThroughput](type=long);
+        @signal[successfulThroughput](type=double);
+        @signal[unsuccessfulThroughput](type=double);
+        
            
         @signal[packetReceived](type=inet::Packet);
         
@@ -56,6 +57,9 @@ simple ReplicaAppBroadcast like IApp
         @statistic[throughput](title="throughput"; unit=bps; source="throughput(packetReceived)"; record=vector);
         @statistic[endToEndDelay](title="end-to-end delay"; source="dataAge(packetReceived)"; unit=s; record=histogram,vector; interpolationmode=none);
         @statistic[rcvdPkSeqNo](title="received packet sequence number"; source="appPkSeqNo(packetReceived)"; record=vector; interpolationmode=none);
+        
+        @signal[delayToUse](type=double);
+        @statistic[delayToUse](title="delay to use"; source=delayToUse; record=count, vector, stats; interpolationmode=none);
         
         @statistic[successfulThroughput](title="transaction thoughput [successful]"; source=successfulThroughput; record=count, vector, stats; interpolationmode=none);
 		@statistic[unsuccessfulThroughput](title="transaction thoughput [unsuccessful]"; source=unsuccessfulThroughput; record=count, vector, stats; interpolationmode=none);

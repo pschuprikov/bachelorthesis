@@ -217,7 +217,7 @@ void CoordApp::processPacket(Packet *pk)
                     if (currentTransactions[transactionId] == numReplicas) {
 
                         //throughput stats
-                        emit(registerSignal("successfulThroughput"), (simTime() - startTimes[transactionId]));
+                        emit(registerSignal("successfulThroughput"), (simTime().dbl() - startTimes[transactionId].dbl()));
                         startTimes.erase(transactionId);
 
 
@@ -228,7 +228,7 @@ void CoordApp::processPacket(Packet *pk)
                 } else {
                     EV_INFO << "Received NO vote " << endl;
 
-                    emit(registerSignal("unsuccessfulThroughput"), (simTime() - startTimes[transactionId]));
+                    emit(registerSignal("unsuccessfulThroughput"), (simTime().dbl() - startTimes[transactionId].dbl()));
                     startTimes.erase(transactionId);
 
                     socket.sendTo(createPacket(transactionId, RESPONSE, false), clientAddress[transactionId], destPort);
