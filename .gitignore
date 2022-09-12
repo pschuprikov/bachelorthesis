@@ -1,4 +1,9 @@
 # direnv
-.direnv/
+#
+.direnv
 .envrc
-/.metadata/
+
+# from omnet
+#
+.metadata
+.settings
