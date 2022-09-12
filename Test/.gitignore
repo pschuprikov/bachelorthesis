@@ -1,2 +1,5 @@
 src/Test
 src/libTest.so
+out/
+src/results/
+.oppfeaturestate
