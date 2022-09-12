@@ -1,7 +1,9 @@
 # direnv
-#
+
 .direnv
 .envrc
+.cache
+
 
 # from omnet
 #
