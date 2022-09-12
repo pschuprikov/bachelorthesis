@@ -16,7 +16,7 @@ cleanall: checkmakefiles
 	rm -f src/Makefile
 
 makefiles:
-	cd src && opp_makemake -f --deep
+	cd src && opp_makemake -f --deep --meta:recurse --meta:use-exported-include-paths --meta:use-exported-libs --meta:feature-cflags --meta:feature-ldflags
 
 checkmakefiles:
 	@if [ ! -f src/Makefile ]; then \

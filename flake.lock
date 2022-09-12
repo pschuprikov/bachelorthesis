@@ -62,16 +62,13 @@
       },
       "locked": {
         "lastModified": 1655206082,
-        "narHash": "sha256-GwlXsATmt4PNSIXxAzyLfQk3an1zzzyOAwFzVwvtUkM=",
-        "owner": "pschuprikov",
-        "repo": "nur-packages",
-        "rev": "e0937a44855c8d82b1133bba37b9a35b40e1832e",
-        "type": "github"
+        "narHash": "sha256-fBd/jB6VHcOQTMsQ+jR0swC9sCJzTo5qutdJNOe6Rp8=",
+        "type": "git",
+        "url": "file:///home/pschuprikov/repos/nur-packages"
       },
       "original": {
-        "owner": "pschuprikov",
-        "repo": "nur-packages",
-        "type": "github"
+        "type": "git",
+        "url": "file:///home/pschuprikov/repos/nur-packages"
       }
     },
     "root": {
